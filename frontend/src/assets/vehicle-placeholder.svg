@@ -1,0 +1,9 @@
+<!-- This is an SVG placeholder for vehicle images -->
+<svg width="640" height="480" xmlns="http://www.w3.org/2000/svg">
+  <rect width="640" height="480" fill="#e0e0e0"/>
+  <text x="320" y="240" font-family="Arial" font-size="30" text-anchor="middle" fill="#555555">Fahrzeugbild</text>
+  <path d="M420,260 Q320,190 220,260" stroke="#555555" fill="transparent" stroke-width="3"/>
+  <rect x="180" y="280" width="280" height="100" rx="15" fill="#ffffff" stroke="#555555" stroke-width="3"/>
+  <circle cx="230" cy="380" r="25" fill="#555555"/>
+  <circle cx="410" cy="380" r="25" fill="#555555"/>
+</svg>

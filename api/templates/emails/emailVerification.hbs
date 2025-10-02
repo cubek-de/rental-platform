@@ -1,0 +1,40 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>E-Mail-Verifizierung - WohnmobilTraum</title>
+    <style>
+      body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+      .container { max-width: 600px; margin: 0 auto; padding: 20px; } .header {
+      background: #007bff; color: white; padding: 20px; text-align: center; }
+      .content { padding: 20px; background: #f9f9f9; } .button { display:
+      inline-block; background: #28a745; color: white; padding: 10px 20px;
+      text-decoration: none; border-radius: 5px; } .footer { text-align: center;
+      padding: 20px; font-size: 12px; color: #666; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>WohnmobilTraum</h1>
+        <p>E-Mail-Verifizierung</p>
+      </div>
+      <div class="content">
+        <h2>Hallo {{firstName}},</h2>
+        <p>Vielen Dank für Ihre Registrierung bei WohnmobilTraum!</p>
+        <p>Bitte klicken Sie auf den folgenden Button, um Ihre E-Mail-Adresse zu
+          verifizieren:</p>
+        <p style="text-align: center;">
+          <a href="{{verificationUrl}}" class="button">E-Mail verifizieren</a>
+        </p>
+        <p>Oder kopieren Sie diesen Link in Ihren Browser:</p>
+        <p>{{verificationUrl}}</p>
+        <p>Diese Verifizierung läuft in 24 Stunden ab.</p>
+        <p>Mit freundlichen Grüßen,<br />Das WohnmobilTraum Team</p>
+      </div>
+      <div class="footer">
+        <p>Wenn Sie sich nicht bei WohnmobilTraum registriert haben, ignorieren
+          Sie diese E-Mail bitte.</p>
+      </div>
+    </div>
+  </body>
+</html>
