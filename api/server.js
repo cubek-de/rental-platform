@@ -7,32 +7,15 @@ const morgan = require("morgan");
 const compression = require("compression");
 const rateLimit = require("express-rate-limit");
 const mongoSanitize = require("express-mongo-sanitize");
-// const xss = require("xss-clean");
+const xss = require("xss-clean");
 const hpp = require("hpp");
 const path = require("path");
-const fs = require("fs");
+const dotenv = require("dotenv");
+const swaggerJsdoc = require("swagger-jsdoc");
+const swaggerUi = require("swagger-ui-express");
 
-// Load environment variables manually without dotenv logging
-try {
-  const envPath = path.join(__dirname, ".env");
-  if (fs.existsSync(envPath)) {
-    const envContent = fs.readFileSync(envPath, "utf8");
-    const envLines = envContent.split("\n");
-
-    envLines.forEach((line) => {
-      const trimmedLine = line.trim();
-      if (trimmedLine && !trimmedLine.startsWith("#")) {
-        const [key, ...valueParts] = trimmedLine.split("=");
-        if (key && valueParts.length > 0) {
-          const value = valueParts.join("=").replace(/^["']|["']$/g, "");
-          process.env[key] = value;
-        }
-      }
-    });
-  }
-} catch (error) {
-  console.error("Error loading .env file:", error.message);
-}
+// Load environment variables
+dotenv.config();
 
 // Suppress Mongoose warnings
 mongoose.set("debug", false);
@@ -43,6 +26,68 @@ mongoose.set("autoIndex", false);
 
 // Suppress MongoDB driver warnings
 process.env.MONGODB_DISABLE_DEPRECATED_OPTIONS = "true";
+
+// Swagger configuration
+const swaggerOptions = {
+  definition: {
+    openapi: "3.0.0",
+    info: {
+      title: "Rental Platform API",
+      version: "1.0.0",
+      description: "API for WohnmobilTraum rental platform",
+    },
+    servers: [
+      {
+        url: `http://localhost:${process.env.PORT || 5005}`,
+        description: "Development server",
+      },
+    ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+        },
+      },
+    },
+    security: [
+      {
+        bearerAuth: [],
+      },
+    ],
+  },
+  apis: ["./routes/*.js"], // Path to the API routes
+};
+
+const swaggerSpec = swaggerJsdoc(swaggerOptions);
+
+// Environment validation
+const Joi = require("joi");
+
+const envSchema = Joi.object({
+  NODE_ENV: Joi.string()
+    .valid("development", "production", "test")
+    .default("development"),
+  PORT: Joi.number().default(5005),
+  MONGO_URI: Joi.string().required(),
+  JWT_SECRET: Joi.string().required(),
+  JWT_EXPIRE: Joi.string().default("30d"),
+  FRONTEND_URL: Joi.string().required(),
+  CLOUDINARY_CLOUD_NAME: Joi.string().required(),
+  CLOUDINARY_API_KEY: Joi.string().required(),
+  CLOUDINARY_API_SECRET: Joi.string().required(),
+  SENDGRID_API_KEY: Joi.string().required(),
+  STRIPE_SECRET_KEY: Joi.string().required(),
+  PAYPAL_CLIENT_ID: Joi.string().required(),
+  PAYPAL_CLIENT_SECRET: Joi.string().required(),
+}).unknown();
+
+const { error } = envSchema.validate(process.env);
+if (error) {
+  console.error("Environment validation error:", error.details);
+  process.exit(1);
+}
 
 const app = express();
 
@@ -135,68 +180,16 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // Data sanitization
-// Temporarily disabled mongoSanitize due to Express 5.x compatibility issues
-// app.use(mongoSanitize({
-//   replaceWith: '_',
-//   allowDots: true
-// }));
+app.use(
+  mongoSanitize({
+    replaceWith: "_",
+    allowDots: true,
+  })
+);
 
-// Custom MongoDB sanitization middleware
-// app.use((req, res, next) => {
-//   const sanitizeObject = (obj) => {
-//     if (obj && typeof obj === 'object') {
-//       for (const key in obj) {
-//         if (obj.hasOwnProperty(key)) {
-//           if (typeof obj[key] === 'string' && (obj[key].includes('$') || obj[key].includes('.'))) {
-//             // Remove or replace potentially dangerous MongoDB operators
-//             obj[key] = obj[key].replace(/\$/g, '').replace(/\./g, '');
-//           } else if (typeof obj[key] === 'object') {
-//             sanitizeObject(obj[key]);
-//           }
-//         }
-//       }
-//     }
-//   };
-
-//   if (req.body) sanitizeObject(req.body);
-//   if (req.query) sanitizeObject(req.query);
-//   if (req.params) sanitizeObject(req.params);
-
-//   next();
-// });
+app.use(xss());
 
 app.use(hpp());
-
-// Custom XSS sanitization middleware
-app.use((req, res, next) => {
-  const sanitizeXSS = (obj) => {
-    if (obj && typeof obj === "object") {
-      for (const key in obj) {
-        if (obj.hasOwnProperty(key)) {
-          if (typeof obj[key] === "string") {
-            // Basic XSS sanitization - remove dangerous HTML/script tags
-            obj[key] = obj[key]
-              .replace(
-                /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
-                ""
-              )
-              .replace(/<[^>]*>/g, "")
-              .replace(/javascript:/gi, "")
-              .replace(/on\w+\s*=/gi, "");
-          } else if (typeof obj[key] === "object") {
-            sanitizeXSS(obj[key]);
-          }
-        }
-      }
-    }
-  };
-
-  if (req.body) sanitizeXSS(req.body);
-  if (req.query) sanitizeXSS(req.query);
-  if (req.params) sanitizeXSS(req.params);
-
-  next();
-});
 
 app.use(hpp());
 
@@ -271,6 +264,9 @@ app.get("/api/health", (req, res) => {
     environment: process.env.NODE_ENV,
   });
 });
+
+// Swagger documentation
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // 404 handler
 app.use((req, res) => {

@@ -10,6 +10,26 @@ import {
 } from "flowbite-react";
 import { HiSearch, HiFilter, HiArrowCircleRight } from "react-icons/hi";
 import axios from "axios";
+import Skeleton from "react-loading-skeleton";
+import "react-loading-skeleton/dist/skeleton.css";
+
+const VehicleSkeleton = () => (
+  <Card className="overflow-hidden">
+    <Skeleton height={192} />
+    <div className="p-4">
+      <Skeleton height={24} className="mb-2" />
+      <Skeleton height={16} className="mb-2" />
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        <Skeleton height={16} />
+        <Skeleton height={16} />
+      </div>
+      <div className="flex justify-between items-center">
+        <Skeleton height={20} width={80} />
+        <Skeleton height={36} width={100} />
+      </div>
+    </div>
+  </Card>
+);
 
 const VehicleListPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -174,8 +194,10 @@ const VehicleListPage = () => {
 
       {/* Vehicle List */}
       {loading ? (
-        <div className="flex justify-center py-12">
-          <Spinner size="xl" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <VehicleSkeleton key={index} />
+          ))}
         </div>
       ) : vehicles.length > 0 ? (
         <>

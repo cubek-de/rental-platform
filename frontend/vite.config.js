@@ -12,4 +12,16 @@ export default defineConfig({
   optimizeDeps: {
     include: ["flowbite-react"],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ["react", "react-dom"],
+          router: ["react-router-dom"],
+          ui: ["flowbite-react", "react-icons"],
+          utils: ["axios", "formik", "yup"],
+        },
+      },
+    },
+  },
 });

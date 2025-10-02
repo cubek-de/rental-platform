@@ -4,32 +4,42 @@ import {
   Route,
   useLocation,
 } from "react-router-dom";
+import { Suspense, lazy } from "react";
+import { Spinner } from "flowbite-react";
 
 // Layout Components
 import Header from "./components/layout/Header";
 import Footer from "./components/layout/Footer";
 
 // Page Components
-import LandingPage from "./pages/LandingPage";
-import LoginPage from "./pages/LoginPage";
-import RegisterPage from "./pages/RegisterPage";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage";
-import ResetPasswordPage from "./pages/ResetPasswordPage";
-import EmailVerificationPage from "./pages/EmailVerificationPage";
-import VehicleListPage from "./pages/VehicleListPage";
-import VehicleDetailPage from "./pages/VehicleDetailPage";
-import BookingPage from "./pages/BookingPage";
-import UserDashboard from "./pages/UserDashboard";
-import NotFoundPage from "./pages/NotFoundPage";
+const LandingPage = lazy(() => import("./pages/LandingPage"));
+const LoginPage = lazy(() => import("./pages/LoginPage"));
+const RegisterPage = lazy(() => import("./pages/RegisterPage"));
+const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage"));
+const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
+const EmailVerificationPage = lazy(() =>
+  import("./pages/EmailVerificationPage")
+);
+const VehicleListPage = lazy(() => import("./pages/VehicleListPage"));
+const VehicleDetailPage = lazy(() => import("./pages/VehicleDetailPage"));
+const BookingPage = lazy(() => import("./pages/BookingPage"));
+const UserDashboard = lazy(() => import("./pages/UserDashboard"));
+const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 
 // Admin Pages
-import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
-import AdminProfilePage from "./pages/admin/AdminProfilePage";
+const AdminDashboardPage = lazy(() =>
+  import("./pages/admin/AdminDashboardPage")
+);
+const AdminProfilePage = lazy(() => import("./pages/admin/AdminProfilePage"));
 
 // Agent Pages
-import AgentDashboardPage from "./pages/agent/AgentDashboardPage";
-import SimpleAgentDashboard from "./pages/agent/SimpleAgentDashboard";
-import AgentProfilePage from "./pages/agent/AgentProfilePage";
+const AgentDashboardPage = lazy(() =>
+  import("./pages/agent/AgentDashboardPage")
+);
+const SimpleAgentDashboard = lazy(() =>
+  import("./pages/agent/SimpleAgentDashboard")
+);
+const AgentProfilePage = lazy(() => import("./pages/agent/AgentProfilePage"));
 
 // Context
 import { AuthProvider } from "./context/AuthContext";
@@ -55,34 +65,42 @@ const AppLayout = () => {
         !isAgentPage &&
         !isUserPage && <Header />}
       <main className="flex-grow">
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route
-            path="/reset-password/:token"
-            element={<ResetPasswordPage />}
-          />
-          <Route
-            path="/verify-email/:token"
-            element={<EmailVerificationPage />}
-          />
-          <Route path="/vehicles" element={<VehicleListPage />} />
-          <Route path="/vehicles/:slug" element={<VehicleDetailPage />} />
-          <Route path="/booking/:id" element={<BookingPage />} />
-          <Route path="/dashboard/*" element={<UserDashboard />} />
+        <Suspense
+          fallback={
+            <div className="flex justify-center py-12">
+              <Spinner size="xl" />
+            </div>
+          }
+        >
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route
+              path="/reset-password/:token"
+              element={<ResetPasswordPage />}
+            />
+            <Route
+              path="/verify-email/:token"
+              element={<EmailVerificationPage />}
+            />
+            <Route path="/vehicles" element={<VehicleListPage />} />
+            <Route path="/vehicles/:slug" element={<VehicleDetailPage />} />
+            <Route path="/booking/:id" element={<BookingPage />} />
+            <Route path="/dashboard/*" element={<UserDashboard />} />
 
-          {/* Admin Routes */}
-          <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
-          <Route path="/admin/profile" element={<AdminProfilePage />} />
+            {/* Admin Routes */}
+            <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+            <Route path="/admin/profile" element={<AdminProfilePage />} />
 
-          {/* Agent Routes */}
-          <Route path="/agent/dashboard" element={<AgentDashboardPage />} />
-          <Route path="/agent/profile" element={<AgentProfilePage />} />
+            {/* Agent Routes */}
+            <Route path="/agent/dashboard" element={<AgentDashboardPage />} />
+            <Route path="/agent/profile" element={<AgentProfilePage />} />
 
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </Suspense>
       </main>
       {!isAuthPage && !isAdminPage && !isAgentPage && !isUserPage && <Footer />}
     </div>
