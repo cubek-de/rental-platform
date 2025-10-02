@@ -77,7 +77,7 @@ const envSchema = Joi.object({
   CLOUDINARY_CLOUD_NAME: Joi.string().required(),
   CLOUDINARY_API_KEY: Joi.string().required(),
   CLOUDINARY_API_SECRET: Joi.string().required(),
-  SENDGRID_API_KEY: Joi.string().required(),
+  SENDGRID_API_KEY: Joi.string().optional(),
   STRIPE_SECRET_KEY: Joi.string().required(),
   PAYPAL_CLIENT_ID: Joi.string().required(),
   PAYPAL_CLIENT_SECRET: Joi.string().required(),
