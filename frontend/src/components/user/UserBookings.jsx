@@ -1,31 +1,17 @@
-import React, { useContext, useState, useEffect } from "react";
-import {
-  Table,
-  Button,
-  Badge,
-  Card,
-  Spinner,
-  Alert,
-  Pagination,
-} from "flowbite-react";
-import { AuthContext } from "../../context/AuthContext";
+import React, { useState, useEffect, useCallback } from "react";
+import { Button, Card, Pagination, Badge, Spinner } from "flowbite-react";
 import api from "../../services/api";
 import { FiEye, FiDownload, FiX } from "react-icons/fi";
 import { Link } from "react-router-dom";
 
 const UserBookings = () => {
-  const { user } = useContext(AuthContext);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  useEffect(() => {
-    fetchBookings();
-  }, [currentPage]);
-
-  const fetchBookings = async () => {
+  const fetchBookings = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
@@ -42,7 +28,11 @@ const UserBookings = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage]);
+
+  useEffect(() => {
+    fetchBookings();
+  }, [fetchBookings]);
 
   const cancelBooking = async (bookingId) => {
     if (

@@ -18,6 +18,7 @@ const getVehicles = async (req, res) => {
       endDate,
       features,
       sortBy,
+      featured,
       page = 1,
       limit = 12,
     } = req.query;
@@ -48,6 +49,10 @@ const getVehicles = async (req, res) => {
       featureArray.forEach((feature) => {
         query[`equipment.${feature}`] = true;
       });
+    }
+
+    if (typeof featured !== "undefined") {
+      query.featured = featured === "true";
     }
 
     // Location search
@@ -125,17 +130,8 @@ const getVehicle = async (req, res) => {
     const { slug } = req.params;
 
     const vehicle = await Vehicle.findOne({ slug })
-      .populate(
-        "owner",
-        "firstName lastName email profile.phone agent Profile.companyName"
-      )
-      .populate({
-        path: "reviews",
-        populate: {
-          path: "user",
-          select: "firstName lastName profile.avatar",
-        },
-      });
+      .populate("owner", "firstName lastName email")
+      .lean();
 
     if (!vehicle) {
       return res.status(404).json({
@@ -144,9 +140,10 @@ const getVehicle = async (req, res) => {
       });
     }
 
-    // Increment view count
-    vehicle.statistics.views += 1;
-    await vehicle.save();
+    // Increment view count (do this without .save() since we used .lean())
+    await Vehicle.findByIdAndUpdate(vehicle._id, {
+      $inc: { "statistics.views": 1 },
+    });
 
     // Get availability calendar
     const startDate = new Date();
@@ -172,6 +169,7 @@ const getVehicle = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Fehler beim Abrufen des Fahrzeugs",
+      error: error.message,
     });
   }
 };

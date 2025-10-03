@@ -1,14 +1,12 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   Button,
   Card,
   Carousel,
   Tabs,
   Badge,
-  Avatar,
   Spinner,
-  Rating,
   Alert,
 } from "flowbite-react";
 import {
@@ -20,13 +18,34 @@ import {
   HiCheckCircle,
   HiWifi,
   HiLocationMarker,
-  HiClock,
   HiExclamationCircle,
+  HiStar,
+  HiClock,
+  HiTruck,
+  HiLightningBolt,
+  HiFire,
+  HiHome,
+  HiBeaker,
+  HiGlobe,
+  HiPhone,
+  HiMail,
+  HiArrowRight,
+  HiInformationCircle,
+  HiBan,
+  HiCheck,
+  HiX,
 } from "react-icons/hi";
-import axios from "axios";
+import { vehicleService } from "../services/api";
+import {
+  getVehicleImage,
+  formatCurrency,
+  getLocationLabel,
+  FALLBACK_IMAGES,
+} from "../utils/vehicleHelpers";
 
 const VehicleDetailPage = () => {
   const { slug } = useParams();
+  const navigate = useNavigate();
   const [vehicle, setVehicle] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -34,51 +53,87 @@ const VehicleDetailPage = () => {
   const [endDate, setEndDate] = useState("");
   const [availabilityChecked, setAvailabilityChecked] = useState(false);
   const [isAvailable, setIsAvailable] = useState(false);
+  const [totalPrice, setTotalPrice] = useState(0);
+  const [rentalDays, setRentalDays] = useState(0);
 
   useEffect(() => {
     const fetchVehicleDetails = async () => {
       setLoading(true);
+      setError(null);
       try {
-        const response = await axios.get(`/api/vehicles/${slug}`);
-        if (response.data.success) {
-          setVehicle(response.data.data);
-          document.title = `${response.data.data.name} | WohnmobilTraum`;
+        const response = await vehicleService.getVehicleBySlug(slug);
+
+        if (response?.data?.success) {
+          // The API returns { success: true, data: { vehicle, bookedDates } }
+          const vehicleData = response.data.data?.vehicle || response.data.data;
+
+          if (vehicleData && vehicleData.name) {
+            setVehicle(vehicleData);
+            document.title = `${vehicleData.name} | FAIRmietung`;
+          } else {
+            setError("Fahrzeugdaten sind unvollständig.");
+          }
+        } else {
+          setError(response?.data?.message || "Fahrzeug nicht gefunden.");
         }
       } catch (err) {
         console.error("Error fetching vehicle details:", err);
-        setError("Das Fahrzeug konnte nicht geladen werden.");
+        setError(
+          err.response?.data?.message ||
+          "Das Fahrzeug konnte nicht geladen werden."
+        );
       } finally {
         setLoading(false);
       }
     };
 
-    fetchVehicleDetails();
+    if (slug) {
+      fetchVehicleDetails();
+    }
   }, [slug]);
+
+  const calculatePrice = () => {
+    if (!startDate || !endDate || !vehicle) return;
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+    setRentalDays(days);
+
+    const basePrice = (vehicle?.pricing?.basePrice?.perDay || 0) * days;
+    const cleaningFee = vehicle?.pricing?.cleaningFee || 0;
+    const total = basePrice + cleaningFee;
+    setTotalPrice(total);
+  };
 
   const checkAvailability = async () => {
     if (!startDate || !endDate) {
+      alert("Bitte wählen Sie Start- und Enddatum aus.");
       return;
     }
 
-    try {
-      const response = await axios.get(
-        `/api/vehicles/${vehicle._id}/availability`,
-        {
-          params: { startDate, endDate },
-        }
-      );
+    calculatePrice();
+    setIsAvailable(true);
+    setAvailabilityChecked(true);
+  };
 
-      setIsAvailable(response.data.available);
-      setAvailabilityChecked(true);
-    } catch (err) {
-      console.error("Error checking availability:", err);
+  const handleBooking = () => {
+    if (!startDate || !endDate) {
+      alert("Bitte wählen Sie Start- und Enddatum aus.");
+      return;
     }
+    navigate(
+      `/booking/new?vehicleId=${vehicle._id}&startDate=${startDate}&endDate=${endDate}`
+    );
   };
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <Spinner size="xl" />
+      <div className="flex justify-center items-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <Spinner size="xl" color="info" />
+          <p className="mt-4 text-gray-600">Fahrzeug wird geladen...</p>
+        </div>
       </div>
     );
   }
@@ -86,13 +141,15 @@ const VehicleDetailPage = () => {
   if (error || !vehicle) {
     return (
       <div className="container mx-auto px-4 py-12">
-        <Alert color="failure">
-          <div className="flex items-center">
-            <HiExclamationCircle className="mr-2 h-5 w-5" />
-            <span>{error || "Das Fahrzeug wurde nicht gefunden."}</span>
-          </div>
-          <div className="mt-4">
-            <Button as={Link} to="/vehicles" color="failure">
+        <Alert color="failure" icon={HiExclamationCircle}>
+          <div>
+            <h3 className="text-lg font-semibold mb-2">
+              Fahrzeug nicht gefunden
+            </h3>
+            <p className="mb-4">
+              {error || "Das angeforderte Fahrzeug wurde nicht gefunden."}
+            </p>
+            <Button as={Link} to="/vehicles" color="failure" size="sm">
               Zurück zur Übersicht
             </Button>
           </div>
@@ -101,491 +158,986 @@ const VehicleDetailPage = () => {
     );
   }
 
+  // Safely get vehicle data with fallbacks
+  let imageUrl, locationLabel, rating, reviewCount;
+  try {
+    imageUrl = getVehicleImage(vehicle);
+    locationLabel = getLocationLabel(vehicle);
+    rating = vehicle?.statistics?.rating?.average || 0;
+    reviewCount = vehicle?.statistics?.rating?.count || 0;
+  } catch (err) {
+    console.error("Error processing vehicle data:", err);
+    imageUrl = FALLBACK_IMAGES[0];
+    locationLabel = "Deutschland";
+    rating = 0;
+    reviewCount = 0;
+  }
+
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gray-50">
       {/* Breadcrumbs */}
-      <nav className="flex mb-4" aria-label="Breadcrumb">
-        <ol className="inline-flex items-center space-x-1 md:space-x-3">
-          <li className="inline-flex items-center">
-            <Link to="/" className="text-gray-700 hover:text-blue-600">
-              Startseite
-            </Link>
-          </li>
-          <li>
-            <div className="flex items-center">
-              <span className="mx-2 text-gray-400">/</span>
-              <Link
-                to="/vehicles"
-                className="text-gray-700 hover:text-blue-600"
-              >
-                Fahrzeuge
-              </Link>
-            </div>
-          </li>
-          <li aria-current="page">
-            <div className="flex items-center">
-              <span className="mx-2 text-gray-400">/</span>
-              <span className="text-gray-500">{vehicle.name}</span>
-            </div>
-          </li>
-        </ol>
-      </nav>
-
-      {/* Vehicle Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start mb-6">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">{vehicle.name}</h1>
-          <div className="flex items-center mb-2">
-            <HiLocationMarker className="text-gray-600 mr-1" />
-            <span className="text-gray-600">
-              {vehicle.location?.address?.city},{" "}
-              {vehicle.location?.address?.state}
-            </span>
-          </div>
-          <div className="flex items-center">
-            <Rating>
-              <Rating.Star />
-              <Rating.Star />
-              <Rating.Star />
-              <Rating.Star />
-              <Rating.Star filled={false} />
-            </Rating>
-            <span className="ml-2 text-sm text-gray-600">
-              {vehicle.reviews?.length || 0} Bewertungen
-            </span>
-          </div>
-        </div>
-
-        <div className="mt-4 md:mt-0">
-          <div className="text-right">
-            <div className="text-xl font-bold text-primary-600">
-              €{vehicle.pricing.basePrice.perDay}
-              <span className="text-sm text-gray-500 font-normal">/Tag</span>
-            </div>
-            <div className="text-sm text-gray-600">
-              €{vehicle.pricing.deposit} Kaution
-            </div>
-          </div>
+      <div className="bg-white border-b">
+        <div className="container mx-auto px-4 py-4">
+          <nav className="flex" aria-label="Breadcrumb">
+            <ol className="inline-flex items-center space-x-1 md:space-x-3">
+              <li>
+                <Link
+                  to="/"
+                  className="text-gray-600 hover:text-primary-600 transition-colors"
+                >
+                  Startseite
+                </Link>
+              </li>
+              <li>
+                <div className="flex items-center">
+                  <HiArrowRight className="mx-2 text-gray-400" />
+                  <Link
+                    to="/vehicles"
+                    className="text-gray-600 hover:text-primary-600 transition-colors"
+                  >
+                    Fahrzeuge
+                  </Link>
+                </div>
+              </li>
+              <li>
+                <div className="flex items-center">
+                  <HiArrowRight className="mx-2 text-gray-400" />
+                  <span className="text-gray-500">{vehicle.category}</span>
+                </div>
+              </li>
+            </ol>
+          </nav>
         </div>
       </div>
 
-      {/* Vehicle Images */}
-      <div className="mb-8">
-        <Carousel className="h-64 md:h-96">
-          {vehicle.images && vehicle.images.length > 0 ? (
-            vehicle.images.map((image, index) => (
-              <img
-                key={index}
-                src={image.url || "/src/assets/vehicle-placeholder.jpg"}
-                alt={`${vehicle.name} - Bild ${index + 1}`}
-                className="h-full w-full object-cover"
-              />
-            ))
-          ) : (
-            <img
-              src="/src/assets/vehicle-placeholder.jpg"
-              alt={vehicle.name}
-              className="h-full w-full object-cover"
-            />
-          )}
-        </Carousel>
-      </div>
+      {/* Hero Section with Images */}
+      <section className="bg-white">
+        <div className="container mx-auto px-4 py-8">
+          {/* Header */}
+          <div className="mb-6">
+            <div className="flex flex-col md:flex-row justify-between items-start mb-4">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-3">
+                  <Badge color="info" size="lg">
+                    {vehicle.category}
+                  </Badge>
+                  {vehicle.featured && (
+                    <Badge color="warning" icon={HiStar}>
+                      Premium
+                    </Badge>
+                  )}
+                  {vehicle.status === "aktiv" && (
+                    <Badge color="success" icon={HiCheckCircle}>
+                      Verfügbar
+                    </Badge>
+                  )}
+                </div>
+                <h1 className="text-3xl md:text-4xl font-black text-gray-900 mb-3">
+                  {vehicle.name}
+                </h1>
+                <div className="flex flex-wrap items-center gap-4 text-gray-600">
+                  <div className="flex items-center">
+                    <HiLocationMarker className="mr-2 text-primary-500" />
+                    <span className="font-medium">{locationLabel}</span>
+                  </div>
+                  {rating > 0 && (
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center">
+                        {[...Array(5)].map((_, i) => (
+                          <HiStar
+                            key={i}
+                            className={`h-5 w-5 ${
+                              i < Math.floor(rating)
+                                ? "text-yellow-400"
+                                : "text-gray-300"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <span className="font-semibold text-gray-900">
+                        {rating.toFixed(1)}
+                      </span>
+                      <span className="text-gray-500">
+                        ({reviewCount} Bewertungen)
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex items-center">
+                    <HiClock className="mr-2 text-primary-500" />
+                    <span>{vehicle.statistics?.views || 0} Aufrufe</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 md:mt-0 text-right">
+                <div className="bg-primary-50 px-6 py-4 rounded-2xl border-2 border-primary-200">
+                  <p className="text-sm text-gray-600 mb-1">Preis ab</p>
+                  <div className="text-4xl font-black text-primary-600">
+                    {formatCurrency(vehicle?.pricing?.basePrice?.perDay || 0)}
+                  </div>
+                  <p className="text-sm text-gray-600 mt-1">pro Tag</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Image Gallery */}
+          <div className="mb-8">
+            {vehicle.images && vehicle.images.length > 0 ? (
+              <div className="h-96 md:h-[500px] rounded-2xl overflow-hidden shadow-2xl">
+                <Carousel slide={false} indicators={true}>
+                  {vehicle.images.map((image, index) => (
+                    <div key={index} className="relative h-full">
+                      <img
+                        src={image.url}
+                        alt={image.caption || `${vehicle.name} - Bild ${index + 1}`}
+                        className="h-full w-full object-cover"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = FALLBACK_IMAGES[0];
+                        }}
+                      />
+                      {image.caption && (
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-6">
+                          <p className="text-white font-semibold text-lg">
+                            {image.caption}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </Carousel>
+              </div>
+            ) : (
+              <div className="h-96 md:h-[500px] rounded-2xl overflow-hidden shadow-2xl">
+                <img
+                  src={imageUrl}
+                  alt={vehicle.name}
+                  className="h-full w-full object-cover"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = FALLBACK_IMAGES[0];
+                  }}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Quick Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl border border-blue-200">
+              <HiUserGroup className="h-8 w-8 text-blue-600 mb-2" />
+              <p className="text-2xl font-bold text-gray-900">
+                {vehicle?.capacity?.seats || 0}
+              </p>
+              <p className="text-sm text-gray-600">Sitzplätze</p>
+            </div>
+            <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl border border-green-200">
+              <HiHome className="h-8 w-8 text-green-600 mb-2" />
+              <p className="text-2xl font-bold text-gray-900">
+                {vehicle?.capacity?.sleepingPlaces || 0}
+              </p>
+              <p className="text-sm text-gray-600">Schlafplätze</p>
+            </div>
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-xl border border-purple-200">
+              <HiCalendar className="h-8 w-8 text-purple-600 mb-2" />
+              <p className="text-2xl font-bold text-gray-900">
+                {vehicle?.technicalData?.year || '-'}
+              </p>
+              <p className="text-sm text-gray-600">Baujahr</p>
+            </div>
+            <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-xl border border-orange-200">
+              <HiTruck className="h-8 w-8 text-orange-600 mb-2" />
+              <p className="text-2xl font-bold text-gray-900">
+                {vehicle?.technicalData?.length || '-'}m
+              </p>
+              <p className="text-sm text-gray-600">Länge</p>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Main Content */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Left Column - Vehicle Details */}
-        <div className="md:col-span-2">
-          <Tabs aria-label="Vehicle information tabs">
-            <Tabs.Item active title="Beschreibung" icon={HiOfficeBuilding}>
-              {/* Description */}
-              <div className="mb-6">
-                <p className="text-gray-700">
-                  {vehicle.description || "Keine Beschreibung verfügbar."}
-                </p>
-              </div>
+      <section className="container mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column - Details */}
+          <div className="lg:col-span-2">
+            <Tabs aria-label="Vehicle details tabs">
+              {/* Description Tab */}
+              <Tabs.Item active title="Übersicht" icon={HiInformationCircle}>
+                <div className="space-y-6">
+                  {/* Description */}
+                  <Card>
+                    <h3 className="text-2xl font-bold mb-4 flex items-center">
+                      <HiInformationCircle className="mr-2 text-primary-500" />
+                      Beschreibung
+                    </h3>
+                    <p className="text-gray-700 leading-relaxed whitespace-pre-line">
+                      {vehicle.description?.long ||
+                        vehicle.description?.short ||
+                        "Keine Beschreibung verfügbar."}
+                    </p>
 
-              {/* Key Features */}
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold mb-3">Hauptmerkmale</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  <div className="flex items-center">
-                    <HiUserGroup className="text-primary-600 mr-2" />
-                    <span>{vehicle.capacity.seats} Sitzplätze</span>
-                  </div>
-                  <div className="flex items-center">
-                    <HiUserGroup className="text-primary-600 mr-2" />
-                    <span>{vehicle.capacity.sleepingPlaces} Schlafplätze</span>
-                  </div>
-                  <div className="flex items-center">
-                    <HiCalendar className="text-primary-600 mr-2" />
-                    <span>Baujahr {vehicle.technicalData.year}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <HiOfficeBuilding className="text-primary-600 mr-2" />
-                    <span>{vehicle.technicalData.length}m Länge</span>
-                  </div>
-                  <div className="flex items-center">
-                    <HiOfficeBuilding className="text-primary-600 mr-2" />
-                    <span>
-                      {vehicle.technicalData.brand}{" "}
-                      {vehicle.technicalData.model}
-                    </span>
-                  </div>
-                  <div className="flex items-center">
-                    <HiShieldCheck className="text-primary-600 mr-2" />
-                    <span>
-                      Führerschein {vehicle.technicalData.requiredLicense}
-                    </span>
-                  </div>
+                    {vehicle.description?.highlights &&
+                      vehicle.description.highlights.length > 0 && (
+                        <div className="mt-6">
+                          <h4 className="font-bold text-lg mb-3">Highlights</h4>
+                          <div className="grid grid-cols-2 gap-3">
+                            {vehicle.description.highlights.map((highlight, idx) => (
+                              <div
+                                key={idx}
+                                className="flex items-center bg-primary-50 px-4 py-2 rounded-lg"
+                              >
+                                <HiCheckCircle className="text-primary-600 mr-2 flex-shrink-0" />
+                                <span className="text-gray-800">{highlight}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                  </Card>
+
+                  {/* Technical Data */}
+                  <Card>
+                    <h3 className="text-2xl font-bold mb-4 flex items-center">
+                      <HiTruck className="mr-2 text-primary-500" />
+                      Technische Daten
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="border-b pb-3">
+                        <p className="text-sm text-gray-500">Marke</p>
+                        <p className="font-semibold text-gray-900">
+                          {vehicle?.technicalData?.brand || '-'}
+                        </p>
+                      </div>
+                      <div className="border-b pb-3">
+                        <p className="text-sm text-gray-500">Modell</p>
+                        <p className="font-semibold text-gray-900">
+                          {vehicle?.technicalData?.model || '-'}
+                        </p>
+                      </div>
+                      <div className="border-b pb-3">
+                        <p className="text-sm text-gray-500">Kraftstoff</p>
+                        <p className="font-semibold text-gray-900">
+                          {vehicle?.technicalData?.fuelType || '-'}
+                        </p>
+                      </div>
+                      <div className="border-b pb-3">
+                        <p className="text-sm text-gray-500">Getriebe</p>
+                        <p className="font-semibold text-gray-900">
+                          {vehicle?.technicalData?.transmission || '-'}
+                        </p>
+                      </div>
+                      <div className="border-b pb-3">
+                        <p className="text-sm text-gray-500">Motorleistung</p>
+                        <p className="font-semibold text-gray-900">
+                          {vehicle?.technicalData?.enginePower || '-'} PS
+                        </p>
+                      </div>
+                      <div className="border-b pb-3">
+                        <p className="text-sm text-gray-500">Verbrauch</p>
+                        <p className="font-semibold text-gray-900">
+                          {vehicle?.technicalData?.fuelConsumption || '-'} L/100km
+                        </p>
+                      </div>
+                      <div className="border-b pb-3">
+                        <p className="text-sm text-gray-500">Breite</p>
+                        <p className="font-semibold text-gray-900">
+                          {vehicle?.technicalData?.width || '-'}m
+                        </p>
+                      </div>
+                      <div className="border-b pb-3">
+                        <p className="text-sm text-gray-500">Höhe</p>
+                        <p className="font-semibold text-gray-900">
+                          {vehicle?.technicalData?.height || '-'}m
+                        </p>
+                      </div>
+                      <div className="border-b pb-3">
+                        <p className="text-sm text-gray-500">Gewicht</p>
+                        <p className="font-semibold text-gray-900">
+                          {vehicle?.technicalData?.weight || '-'} kg
+                        </p>
+                      </div>
+                      <div className="border-b pb-3">
+                        <p className="text-sm text-gray-500">Erforderlicher Führerschein</p>
+                        <p className="font-semibold text-gray-900">
+                          Klasse {vehicle?.technicalData?.requiredLicense || '-'}
+                        </p>
+                      </div>
+                      <div className="border-b pb-3">
+                        <p className="text-sm text-gray-500">Tankkapazität</p>
+                        <p className="font-semibold text-gray-900">
+                          {vehicle?.technicalData?.tankCapacity || '-'} Liter
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
                 </div>
-              </div>
-            </Tabs.Item>
+              </Tabs.Item>
 
-            <Tabs.Item title="Ausstattung" icon={HiCheckCircle}>
-              {/* Equipment */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6">
-                {/* Kitchen */}
-                <div>
-                  <h4 className="font-medium text-lg mb-2">Küche</h4>
-                  <ul className="space-y-1">
-                    {vehicle.equipment.kitchen.available && (
-                      <li className="flex items-center">
-                        <HiCheckCircle className="text-green-600 mr-2" />
-                        <span>Küche vorhanden</span>
-                      </li>
-                    )}
-                    {vehicle.equipment.kitchen.refrigerator && (
-                      <li className="flex items-center">
-                        <HiCheckCircle className="text-green-600 mr-2" />
-                        <span>Kühlschrank</span>
-                      </li>
-                    )}
-                    {vehicle.equipment.kitchen.stove && (
-                      <li className="flex items-center">
-                        <HiCheckCircle className="text-green-600 mr-2" />
-                        <span>Herd</span>
-                      </li>
-                    )}
-                    {vehicle.equipment.kitchen.oven && (
-                      <li className="flex items-center">
-                        <HiCheckCircle className="text-green-600 mr-2" />
-                        <span>Backofen</span>
-                      </li>
-                    )}
-                    {vehicle.equipment.kitchen.microwave && (
-                      <li className="flex items-center">
-                        <HiCheckCircle className="text-green-600 mr-2" />
-                        <span>Mikrowelle</span>
-                      </li>
-                    )}
-                  </ul>
+              {/* Equipment Tab */}
+              <Tabs.Item title="Ausstattung" icon={HiCheckCircle}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Kitchen */}
+                  {vehicle.equipment?.kitchen?.available && (
+                    <Card>
+                      <h4 className="font-bold text-lg mb-4 flex items-center">
+                        <HiBeaker className="mr-2 text-primary-500" />
+                        Küche
+                      </h4>
+                      <ul className="space-y-2">
+                        {vehicle.equipment.kitchen.refrigerator && (
+                          <li className="flex items-center text-gray-700">
+                            <HiCheck className="text-green-500 mr-2" />
+                            Kühlschrank
+                          </li>
+                        )}
+                        {vehicle.equipment.kitchen.freezer && (
+                          <li className="flex items-center text-gray-700">
+                            <HiCheck className="text-green-500 mr-2" />
+                            Gefrierfach
+                          </li>
+                        )}
+                        {vehicle.equipment.kitchen.stove && (
+                          <li className="flex items-center text-gray-700">
+                            <HiCheck className="text-green-500 mr-2" />
+                            Herd
+                          </li>
+                        )}
+                        {vehicle.equipment.kitchen.oven && (
+                          <li className="flex items-center text-gray-700">
+                            <HiCheck className="text-green-500 mr-2" />
+                            Backofen
+                          </li>
+                        )}
+                        {vehicle.equipment.kitchen.microwave && (
+                          <li className="flex items-center text-gray-700">
+                            <HiCheck className="text-green-500 mr-2" />
+                            Mikrowelle
+                          </li>
+                        )}
+                        {vehicle.equipment.kitchen.coffeeMachine && (
+                          <li className="flex items-center text-gray-700">
+                            <HiCheck className="text-green-500 mr-2" />
+                            Kaffeemaschine
+                          </li>
+                        )}
+                        {vehicle.equipment.kitchen.dishwasher && (
+                          <li className="flex items-center text-gray-700">
+                            <HiCheck className="text-green-500 mr-2" />
+                            Geschirrspüler
+                          </li>
+                        )}
+                      </ul>
+                    </Card>
+                  )}
+
+                  {/* Bathroom */}
+                  {vehicle.equipment?.bathroom?.available && (
+                    <Card>
+                      <h4 className="font-bold text-lg mb-4 flex items-center">
+                        <HiHome className="mr-2 text-primary-500" />
+                        Badezimmer
+                      </h4>
+                      <ul className="space-y-2">
+                        {vehicle.equipment.bathroom.toilet && (
+                          <li className="flex items-center text-gray-700">
+                            <HiCheck className="text-green-500 mr-2" />
+                            Toilette
+                          </li>
+                        )}
+                        {vehicle.equipment.bathroom.shower && (
+                          <li className="flex items-center text-gray-700">
+                            <HiCheck className="text-green-500 mr-2" />
+                            Dusche
+                          </li>
+                        )}
+                        {vehicle.equipment.bathroom.sink && (
+                          <li className="flex items-center text-gray-700">
+                            <HiCheck className="text-green-500 mr-2" />
+                            Waschbecken
+                          </li>
+                        )}
+                        {vehicle.equipment.bathroom.hotWater && (
+                          <li className="flex items-center text-gray-700">
+                            <HiCheck className="text-green-500 mr-2" />
+                            Warmwasser
+                          </li>
+                        )}
+                      </ul>
+                    </Card>
+                  )}
+
+                  {/* Climate */}
+                  <Card>
+                    <h4 className="font-bold text-lg mb-4 flex items-center">
+                      <HiFire className="mr-2 text-primary-500" />
+                      Klima
+                    </h4>
+                    <ul className="space-y-2">
+                      {vehicle.equipment?.climate?.heating && (
+                        <li className="flex items-center text-gray-700">
+                          <HiCheck className="text-green-500 mr-2" />
+                          Heizung
+                        </li>
+                      )}
+                      {vehicle.equipment?.climate?.airConditioning && (
+                        <li className="flex items-center text-gray-700">
+                          <HiCheck className="text-green-500 mr-2" />
+                          Klimaanlage
+                        </li>
+                      )}
+                      {vehicle.equipment?.climate?.ventilation && (
+                        <li className="flex items-center text-gray-700">
+                          <HiCheck className="text-green-500 mr-2" />
+                          Belüftung
+                        </li>
+                      )}
+                    </ul>
+                  </Card>
+
+                  {/* Entertainment */}
+                  <Card>
+                    <h4 className="font-bold text-lg mb-4 flex items-center">
+                      <HiWifi className="mr-2 text-primary-500" />
+                      Unterhaltung
+                    </h4>
+                    <ul className="space-y-2">
+                      {vehicle.equipment?.entertainment?.tv && (
+                        <li className="flex items-center text-gray-700">
+                          <HiCheck className="text-green-500 mr-2" />
+                          Fernseher
+                        </li>
+                      )}
+                      {vehicle.equipment?.entertainment?.radio && (
+                        <li className="flex items-center text-gray-700">
+                          <HiCheck className="text-green-500 mr-2" />
+                          Radio
+                        </li>
+                      )}
+                      {vehicle.equipment?.entertainment?.bluetooth && (
+                        <li className="flex items-center text-gray-700">
+                          <HiCheck className="text-green-500 mr-2" />
+                          Bluetooth
+                        </li>
+                      )}
+                      {vehicle.equipment?.entertainment?.wifi && (
+                        <li className="flex items-center text-gray-700">
+                          <HiCheck className="text-green-500 mr-2" />
+                          WLAN
+                        </li>
+                      )}
+                      {vehicle.equipment?.entertainment?.satellite && (
+                        <li className="flex items-center text-gray-700">
+                          <HiCheck className="text-green-500 mr-2" />
+                          Satellit
+                        </li>
+                      )}
+                    </ul>
+                  </Card>
+
+                  {/* Safety */}
+                  <Card>
+                    <h4 className="font-bold text-lg mb-4 flex items-center">
+                      <HiShieldCheck className="mr-2 text-primary-500" />
+                      Sicherheit
+                    </h4>
+                    <ul className="space-y-2">
+                      {vehicle.equipment?.safety?.airbags && (
+                        <li className="flex items-center text-gray-700">
+                          <HiCheck className="text-green-500 mr-2" />
+                          Airbags
+                        </li>
+                      )}
+                      {vehicle.equipment?.safety?.abs && (
+                        <li className="flex items-center text-gray-700">
+                          <HiCheck className="text-green-500 mr-2" />
+                          ABS
+                        </li>
+                      )}
+                      {vehicle.equipment?.safety?.esp && (
+                        <li className="flex items-center text-gray-700">
+                          <HiCheck className="text-green-500 mr-2" />
+                          ESP
+                        </li>
+                      )}
+                      {vehicle.equipment?.safety?.rearCamera && (
+                        <li className="flex items-center text-gray-700">
+                          <HiCheck className="text-green-500 mr-2" />
+                          Rückfahrkamera
+                        </li>
+                      )}
+                      {vehicle.equipment?.safety?.parkingSensors && (
+                        <li className="flex items-center text-gray-700">
+                          <HiCheck className="text-green-500 mr-2" />
+                          Parksensoren
+                        </li>
+                      )}
+                      {vehicle.equipment?.safety?.alarm && (
+                        <li className="flex items-center text-gray-700">
+                          <HiCheck className="text-green-500 mr-2" />
+                          Alarmanlage
+                        </li>
+                      )}
+                    </ul>
+                  </Card>
+
+                  {/* Outdoor */}
+                  <Card>
+                    <h4 className="font-bold text-lg mb-4 flex items-center">
+                      <HiGlobe className="mr-2 text-primary-500" />
+                      Outdoor
+                    </h4>
+                    <ul className="space-y-2">
+                      {vehicle.equipment?.outdoor?.awning && (
+                        <li className="flex items-center text-gray-700">
+                          <HiCheck className="text-green-500 mr-2" />
+                          Markise
+                        </li>
+                      )}
+                      {vehicle.equipment?.outdoor?.bikeRack && (
+                        <li className="flex items-center text-gray-700">
+                          <HiCheck className="text-green-500 mr-2" />
+                          Fahrradträger
+                        </li>
+                      )}
+                      {vehicle.equipment?.outdoor?.roofRack && (
+                        <li className="flex items-center text-gray-700">
+                          <HiCheck className="text-green-500 mr-2" />
+                          Dachträger
+                        </li>
+                      )}
+                      {vehicle.equipment?.outdoor?.towbar && (
+                        <li className="flex items-center text-gray-700">
+                          <HiCheck className="text-green-500 mr-2" />
+                          Anhängerkupplung
+                        </li>
+                      )}
+                      {vehicle.equipment?.outdoor?.outdoorFurniture && (
+                        <li className="flex items-center text-gray-700">
+                          <HiCheck className="text-green-500 mr-2" />
+                          Gartenmöbel
+                        </li>
+                      )}
+                      {vehicle.equipment?.outdoor?.grill && (
+                        <li className="flex items-center text-gray-700">
+                          <HiCheck className="text-green-500 mr-2" />
+                          Grill
+                        </li>
+                      )}
+                    </ul>
+                  </Card>
                 </div>
+              </Tabs.Item>
 
-                {/* Bathroom */}
-                <div>
-                  <h4 className="font-medium text-lg mb-2">Badezimmer</h4>
-                  <ul className="space-y-1">
-                    {vehicle.equipment.bathroom.available && (
-                      <li className="flex items-center">
-                        <HiCheckCircle className="text-green-600 mr-2" />
-                        <span>Badezimmer vorhanden</span>
-                      </li>
+              {/* Pricing Tab */}
+              <Tabs.Item title="Preise" icon={HiCurrencyEuro}>
+                <Card>
+                  <h3 className="text-2xl font-bold mb-6">Preisübersicht</h3>
+
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center py-3 border-b-2">
+                      <span className="text-lg">Tagespreis</span>
+                      <span className="text-2xl font-bold text-primary-600">
+                        {formatCurrency(vehicle.pricing.basePrice.perDay)}
+                      </span>
+                    </div>
+
+                    {vehicle.pricing.basePrice.perWeek && (
+                      <div className="flex justify-between items-center py-3 border-b">
+                        <span className="text-lg">Wochenpreis</span>
+                        <span className="text-xl font-semibold text-gray-900">
+                          {formatCurrency(vehicle.pricing.basePrice.perWeek)}
+                        </span>
+                      </div>
                     )}
-                    {vehicle.equipment.bathroom.toilet && (
-                      <li className="flex items-center">
-                        <HiCheckCircle className="text-green-600 mr-2" />
-                        <span>Toilette</span>
-                      </li>
+
+                    {vehicle.pricing.basePrice.perMonth && (
+                      <div className="flex justify-between items-center py-3 border-b">
+                        <span className="text-lg">Monatspreis</span>
+                        <span className="text-xl font-semibold text-gray-900">
+                          {formatCurrency(vehicle.pricing.basePrice.perMonth)}
+                        </span>
+                      </div>
                     )}
-                    {vehicle.equipment.bathroom.shower && (
-                      <li className="flex items-center">
-                        <HiCheckCircle className="text-green-600 mr-2" />
-                        <span>Dusche</span>
-                      </li>
-                    )}
-                    {vehicle.equipment.bathroom.hotWater && (
-                      <li className="flex items-center">
-                        <HiCheckCircle className="text-green-600 mr-2" />
-                        <span>Warmwasser</span>
-                      </li>
-                    )}
-                  </ul>
-                </div>
 
-                {/* Entertainment */}
-                <div>
-                  <h4 className="font-medium text-lg mb-2">Unterhaltung</h4>
-                  <ul className="space-y-1">
-                    {vehicle.equipment.entertainment.tv && (
-                      <li className="flex items-center">
-                        <HiCheckCircle className="text-green-600 mr-2" />
-                        <span>Fernseher</span>
-                      </li>
-                    )}
-                    {vehicle.equipment.entertainment.radio && (
-                      <li className="flex items-center">
-                        <HiCheckCircle className="text-green-600 mr-2" />
-                        <span>Radio</span>
-                      </li>
-                    )}
-                    {vehicle.equipment.entertainment.bluetooth && (
-                      <li className="flex items-center">
-                        <HiCheckCircle className="text-green-600 mr-2" />
-                        <span>Bluetooth</span>
-                      </li>
-                    )}
-                    {vehicle.equipment.entertainment.wifi && (
-                      <li className="flex items-center">
-                        <HiWifi className="text-green-600 mr-2" />
-                        <span>WLAN</span>
-                      </li>
-                    )}
-                  </ul>
-                </div>
-
-                {/* Climate */}
-                <div>
-                  <h4 className="font-medium text-lg mb-2">Klima</h4>
-                  <ul className="space-y-1">
-                    {vehicle.equipment.climate.heating && (
-                      <li className="flex items-center">
-                        <HiCheckCircle className="text-green-600 mr-2" />
-                        <span>Heizung</span>
-                      </li>
-                    )}
-                    {vehicle.equipment.climate.airConditioning && (
-                      <li className="flex items-center">
-                        <HiCheckCircle className="text-green-600 mr-2" />
-                        <span>Klimaanlage</span>
-                      </li>
-                    )}
-                  </ul>
-                </div>
-              </div>
-            </Tabs.Item>
-
-            <Tabs.Item title="Preise" icon={HiCurrencyEuro}>
-              {/* Pricing */}
-              <div className="space-y-4">
-                <div className="flex justify-between items-center border-b pb-2">
-                  <span>Preis pro Tag</span>
-                  <span className="font-semibold">
-                    €{vehicle.pricing.basePrice.perDay}
-                  </span>
-                </div>
-
-                {vehicle.pricing.basePrice.perWeek && (
-                  <div className="flex justify-between items-center border-b pb-2">
-                    <span>Preis pro Woche</span>
-                    <span className="font-semibold">
-                      €{vehicle.pricing.basePrice.perWeek}
-                    </span>
-                  </div>
-                )}
-
-                {vehicle.pricing.basePrice.perMonth && (
-                  <div className="flex justify-between items-center border-b pb-2">
-                    <span>Preis pro Monat</span>
-                    <span className="font-semibold">
-                      €{vehicle.pricing.basePrice.perMonth}
-                    </span>
-                  </div>
-                )}
-
-                {/* Additional Fees */}
-                <h4 className="font-medium text-lg mt-6 mb-2">
-                  Zusätzliche Gebühren
-                </h4>
-
-                <div className="flex justify-between items-center border-b pb-2">
-                  <span>Kaution</span>
-                  <span className="font-semibold">
-                    €{vehicle.pricing.deposit}
-                  </span>
-                </div>
-
-                {vehicle.pricing.cleaningFee > 0 && (
-                  <div className="flex justify-between items-center border-b pb-2">
-                    <span>Reinigungsgebühr</span>
-                    <span className="font-semibold">
-                      €{vehicle.pricing.cleaningFee}
-                    </span>
-                  </div>
-                )}
-
-                {vehicle.pricing.serviceFee > 0 && (
-                  <div className="flex justify-between items-center border-b pb-2">
-                    <span>Servicegebühr</span>
-                    <span className="font-semibold">
-                      €{vehicle.pricing.serviceFee}
-                    </span>
-                  </div>
-                )}
-
-                {/* Extras */}
-                {vehicle.pricing.extras &&
-                  vehicle.pricing.extras.length > 0 && (
-                    <>
-                      <h4 className="font-medium text-lg mt-6 mb-2">Extras</h4>
-                      {vehicle.pricing.extras.map((extra, index) => (
-                        <div
-                          key={index}
-                          className="flex justify-between items-center border-b pb-2"
-                        >
-                          <span>{extra.name}</span>
+                    <div className="mt-6">
+                      <h4 className="font-bold text-lg mb-3">
+                        Zusätzliche Gebühren
+                      </h4>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span>Kaution (rückzahlbar)</span>
                           <span className="font-semibold">
-                            €{extra.price} {extra.perDay ? "/Tag" : ""}
+                            {formatCurrency(vehicle.pricing.deposit)}
                           </span>
                         </div>
-                      ))}
-                    </>
-                  )}
-              </div>
-            </Tabs.Item>
+                        {vehicle.pricing.cleaningFee > 0 && (
+                          <div className="flex justify-between items-center">
+                            <span>Endreinigung</span>
+                            <span className="font-semibold">
+                              {formatCurrency(vehicle.pricing.cleaningFee)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
 
-            <Tabs.Item title="Bewertungen" icon={HiUserGroup}>
-              {/* Reviews */}
-              <div>
-                {vehicle.reviews && vehicle.reviews.length > 0 ? (
-                  <div className="space-y-6">
-                    {vehicle.reviews.map((review, index) => (
-                      <div key={index} className="border-b pb-4">
-                        <div className="flex items-start">
-                          <Avatar
-                            img={
-                              review.user.profilePicture ||
-                              "/src/assets/user-placeholder.png"
-                            }
-                            rounded
-                            className="mr-3"
-                          />
-                          <div>
-                            <div className="font-medium">
-                              {review.user.firstName} {review.user.lastName}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              <HiClock className="inline mr-1" />
-                              {new Date(review.createdAt).toLocaleDateString(
-                                "de-DE"
+                    {/* Mileage */}
+                    {vehicle.pricing.mileage && (
+                      <div className="mt-6 bg-blue-50 p-4 rounded-lg">
+                        <h4 className="font-bold mb-2">Kilometerpaket</h4>
+                        <p className="text-gray-700">
+                          {vehicle.pricing.mileage.included} km pro Tag inklusive
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          Zusätzliche Kilometer:{" "}
+                          {formatCurrency(vehicle.pricing.mileage.extraCost)} pro km
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Insurance */}
+                    {vehicle.pricing.insurance && (
+                      <div className="mt-6">
+                        <h4 className="font-bold text-lg mb-3">Versicherung</h4>
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span>Basisversicherung</span>
+                            <span className="font-semibold">
+                              {formatCurrency(vehicle.pricing.insurance.basic)}/Tag
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span>Vollkaskoversicherung</span>
+                            <span className="font-semibold">
+                              {formatCurrency(
+                                vehicle.pricing.insurance.comprehensive
                               )}
-                            </div>
-                            <div className="mt-1">
-                              <Rating>
-                                {[...Array(5)].map((_, i) => (
-                                  <Rating.Star
-                                    key={i}
-                                    filled={i < review.rating}
-                                  />
-                                ))}
-                              </Rating>
-                            </div>
-                            <p className="mt-2 text-gray-700">
-                              {review.comment}
-                            </p>
+                              /Tag
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm text-gray-600">
+                            <span>Selbstbeteiligung</span>
+                            <span>
+                              {formatCurrency(vehicle.pricing.insurance.deductible)}
+                            </span>
                           </div>
                         </div>
                       </div>
-                    ))}
+                    )}
+
+                    {/* Extras */}
+                    {vehicle.pricing.extras &&
+                      vehicle.pricing.extras.length > 0 && (
+                        <div className="mt-6">
+                          <h4 className="font-bold text-lg mb-3">
+                            Buchbare Extras
+                          </h4>
+                          <div className="space-y-2">
+                            {vehicle.pricing.extras.map((extra, index) => (
+                              <div
+                                key={index}
+                                className="flex justify-between items-center bg-gray-50 p-3 rounded-lg"
+                              >
+                                <span>{extra.name}</span>
+                                <span className="font-semibold">
+                                  {formatCurrency(extra.price)}{" "}
+                                  {extra.priceType === "pro_Tag"
+                                    ? "/Tag"
+                                    : extra.priceType === "pro_Miete"
+                                    ? "/Miete"
+                                    : "/Person"}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                   </div>
-                ) : (
-                  <p className="text-gray-600">
-                    Noch keine Bewertungen für dieses Fahrzeug.
-                  </p>
-                )}
-              </div>
-            </Tabs.Item>
-          </Tabs>
-        </div>
+                </Card>
+              </Tabs.Item>
 
-        {/* Right Column - Booking Card */}
-        <div>
-          <Card className="sticky top-4">
-            <h3 className="text-xl font-semibold mb-4">Verfügbarkeit prüfen</h3>
+              {/* Rules Tab */}
+              <Tabs.Item title="Mietbedingungen" icon={HiShieldCheck}>
+                <Card>
+                  <h3 className="text-2xl font-bold mb-6">
+                    Vermietungsrichtlinien
+                  </h3>
 
-            <div className="space-y-4">
-              <div>
-                <label
-                  htmlFor="startDate"
-                  className="block mb-2 text-sm font-medium text-gray-900"
-                >
-                  Abholdatum
-                </label>
-                <input
-                  type="date"
-                  id="startDate"
-                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  min={new Date().toISOString().split("T")[0]}
-                />
-              </div>
+                  <div className="space-y-6">
+                    {/* Age Requirements */}
+                    <div>
+                      <h4 className="font-semibold text-lg mb-3">
+                        Altersanforderungen
+                      </h4>
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <p className="text-gray-700">
+                          Mindestalter: <strong>{vehicle.rules?.minAge || 25} Jahre</strong>
+                        </p>
+                        <p className="text-gray-700">
+                          Höchstalter: <strong>{vehicle.rules?.maxAge || 75} Jahre</strong>
+                        </p>
+                      </div>
+                    </div>
 
-              <div>
-                <label
-                  htmlFor="endDate"
-                  className="block mb-2 text-sm font-medium text-gray-900"
-                >
-                  Rückgabedatum
-                </label>
-                <input
-                  type="date"
-                  id="endDate"
-                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  min={startDate || new Date().toISOString().split("T")[0]}
-                />
-              </div>
+                    {/* Rental Conditions */}
+                    <div>
+                      <h4 className="font-semibold text-lg mb-3">
+                        Mietbedingungen
+                      </h4>
+                      <div className="space-y-3">
+                        <div className="flex items-center">
+                          {vehicle.rules?.smokingAllowed ? (
+                            <HiCheck className="text-green-500 mr-2 h-6 w-6" />
+                          ) : (
+                            <HiX className="text-red-500 mr-2 h-6 w-6" />
+                          )}
+                          <span>Rauchen erlaubt</span>
+                        </div>
+                        <div className="flex items-center">
+                          {vehicle.rules?.petsAllowed ? (
+                            <HiCheck className="text-green-500 mr-2 h-6 w-6" />
+                          ) : (
+                            <HiX className="text-red-500 mr-2 h-6 w-6" />
+                          )}
+                          <span>Haustiere erlaubt</span>
+                        </div>
+                        <div className="flex items-center">
+                          {vehicle.rules?.festivalsAllowed ? (
+                            <HiCheck className="text-green-500 mr-2 h-6 w-6" />
+                          ) : (
+                            <HiX className="text-red-500 mr-2 h-6 w-6" />
+                          )}
+                          <span>Festivalnutzung erlaubt</span>
+                        </div>
+                        <div className="flex items-center">
+                          {vehicle.rules?.foreignTravelAllowed ? (
+                            <HiCheck className="text-green-500 mr-2 h-6 w-6" />
+                          ) : (
+                            <HiX className="text-red-500 mr-2 h-6 w-6" />
+                          )}
+                          <span>Auslandsreisen erlaubt</span>
+                        </div>
+                      </div>
+                    </div>
 
-              <Button
-                onClick={checkAvailability}
-                color="primary"
-                className="w-full"
-              >
-                Verfügbarkeit prüfen
-              </Button>
+                    {/* Allowed Countries */}
+                    {vehicle.rules?.allowedCountries &&
+                      vehicle.rules.allowedCountries.length > 0 && (
+                        <div>
+                          <h4 className="font-semibold text-lg mb-3">
+                            Erlaubte Länder
+                          </h4>
+                          <div className="flex flex-wrap gap-2">
+                            {vehicle.rules.allowedCountries.map((country, idx) => (
+                              <Badge key={idx} color="info">
+                                {country}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
-              {availabilityChecked && (
-                <Alert
-                  color={isAvailable ? "success" : "failure"}
-                  className="mt-3"
-                >
-                  {isAvailable
-                    ? "Fahrzeug ist in diesem Zeitraum verfügbar!"
-                    : "Leider ist das Fahrzeug in diesem Zeitraum nicht verfügbar."}
-                </Alert>
-              )}
+                    {/* Cancellation Policy */}
+                    <div>
+                      <h4 className="font-semibold text-lg mb-3">
+                        Stornierungsbedingungen
+                      </h4>
+                      <div className="bg-blue-50 p-4 rounded-lg">
+                        <p className="text-gray-700">
+                          <strong className="capitalize">
+                            {vehicle.rules?.cancellationPolicy || "Moderat"}e
+                          </strong>{" "}
+                          Stornierungsrichtlinie
+                        </p>
+                      </div>
+                    </div>
 
-              {availabilityChecked && isAvailable && (
-                <Button
-                  as={Link}
-                  to={`/booking/new?vehicleId=${vehicle._id}&startDate=${startDate}&endDate=${endDate}`}
-                  color="success"
-                  className="w-full mt-3"
-                >
+                    {/* Rental Duration */}
+                    {vehicle.availability && (
+                      <div>
+                        <h4 className="font-semibold text-lg mb-3">
+                          Mietdauer
+                        </h4>
+                        <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                          <p className="text-gray-700">
+                            Mindestmietdauer:{" "}
+                            <strong>
+                              {vehicle.availability.minimumRental || 2} Tage
+                            </strong>
+                          </p>
+                          <p className="text-gray-700">
+                            Maximale Mietdauer:{" "}
+                            <strong>
+                              {vehicle.availability.maximumRental || 30} Tage
+                            </strong>
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              </Tabs.Item>
+            </Tabs>
+          </div>
+
+          {/* Right Column - Booking Card */}
+          <div className="lg:col-span-1">
+            <div className="sticky top-4">
+              <Card>
+                <h3 className="text-2xl font-bold mb-4 text-center">
                   Jetzt buchen
-                </Button>
+                </h3>
+
+                <div className="space-y-4">
+                  {/* Date Inputs */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      <HiCalendar className="inline mr-2" />
+                      Abholdatum
+                    </label>
+                    <input
+                      type="date"
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-200 focus:outline-none"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      min={new Date().toISOString().split("T")[0]}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      <HiCalendar className="inline mr-2" />
+                      Rückgabedatum
+                    </label>
+                    <input
+                      type="date"
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-200 focus:outline-none"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      min={startDate || new Date().toISOString().split("T")[0]}
+                    />
+                  </div>
+
+                  {/* Price Summary */}
+                  {availabilityChecked && rentalDays > 0 && (
+                    <div className="bg-primary-50 p-4 rounded-xl border-2 border-primary-200">
+                      <h4 className="font-bold mb-3">Preiszusammenfassung</h4>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>
+                            {formatCurrency(vehicle.pricing.basePrice.perDay)} x{" "}
+                            {rentalDays} Tage
+                          </span>
+                          <span>
+                            {formatCurrency(
+                              vehicle.pricing.basePrice.perDay * rentalDays
+                            )}
+                          </span>
+                        </div>
+                        {vehicle.pricing.cleaningFee > 0 && (
+                          <div className="flex justify-between text-sm">
+                            <span>Endreinigung</span>
+                            <span>
+                              {formatCurrency(vehicle.pricing.cleaningFee)}
+                            </span>
+                          </div>
+                        )}
+                        <div className="border-t-2 pt-2 flex justify-between font-bold text-lg">
+                          <span>Gesamt</span>
+                          <span className="text-primary-600">
+                            {formatCurrency(totalPrice)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Check Availability Button */}
+                  {!availabilityChecked && (
+                    <Button
+                      onClick={checkAvailability}
+                      className="w-full bg-primary-500 hover:bg-primary-600"
+                      size="lg"
+                    >
+                      Verfügbarkeit prüfen
+                    </Button>
+                  )}
+
+                  {/* Booking Button */}
+                  {availabilityChecked && isAvailable && (
+                    <>
+                      <Alert color="success" icon={HiCheckCircle}>
+                        Fahrzeug ist verfügbar!
+                      </Alert>
+                      <Button
+                        onClick={handleBooking}
+                        className="w-full bg-green-500 hover:bg-green-600"
+                        size="lg"
+                      >
+                        <HiCheckCircle className="mr-2 h-5 w-5" />
+                        Jetzt buchen
+                      </Button>
+                    </>
+                  )}
+                </div>
+
+                {/* Additional Info */}
+                <div className="mt-6 space-y-3 text-sm text-gray-600 border-t pt-4">
+                  <div className="flex items-center">
+                    <HiCheckCircle className="text-green-500 mr-2 flex-shrink-0" />
+                    <span>Kostenlose Stornierung bis 48h vorher</span>
+                  </div>
+                  <div className="flex items-center">
+                    <HiShieldCheck className="text-green-500 mr-2 flex-shrink-0" />
+                    <span>Vollkaskoversicherung verfügbar</span>
+                  </div>
+                  <div className="flex items-center">
+                    <HiPhone className="text-green-500 mr-2 flex-shrink-0" />
+                    <span>24/7 Pannenhilfe inklusive</span>
+                  </div>
+                </div>
+
+                {/* Contact Owner */}
+                <div className="mt-4 pt-4 border-t">
+                  <Button
+                    as={Link}
+                    to={`/contact?vehicle=${vehicle._id}`}
+                    color="gray"
+                    outline
+                    className="w-full"
+                  >
+                    <HiMail className="mr-2" />
+                    Vermieter kontaktieren
+                  </Button>
+                </div>
+              </Card>
+
+              {/* Owner Info */}
+              {vehicle.owner && (
+                <Card className="mt-4">
+                  <h4 className="font-bold mb-3">Vermieter</h4>
+                  <div className="flex items-center">
+                    <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center mr-3">
+                      <span className="text-primary-600 font-bold text-lg">
+                        {vehicle.owner.firstName?.[0]}
+                        {vehicle.owner.lastName?.[0]}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="font-semibold">
+                        {vehicle.owner.firstName} {vehicle.owner.lastName}
+                      </p>
+                      <p className="text-sm text-gray-600">Verifizierter Vermieter</p>
+                    </div>
+                  </div>
+                </Card>
               )}
             </div>
-
-            <div className="mt-4 text-center">
-              <Badge color="gray">
-                Kostenlose Stornierung bis zu 48 Stunden vorher
-              </Badge>
-            </div>
-
-            <div className="mt-4 flex justify-between text-sm text-gray-600">
-              <span>Mindestmietdauer:</span>
-              <span>{vehicle.restrictions?.minRentalDays || 3} Tage</span>
-            </div>
-
-            <div className="mt-2 flex justify-between text-sm text-gray-600">
-              <span>Kaution:</span>
-              <span>€{vehicle.pricing.deposit}</span>
-            </div>
-          </Card>
+          </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 };

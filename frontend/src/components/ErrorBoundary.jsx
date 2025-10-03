@@ -62,15 +62,15 @@ class ErrorBoundary extends React.Component {
             >
               Seite neu laden
             </button>
-            {import.meta.env.MODE === "development" && (
+            {import.meta.env.MODE === "development" && this.state.error && (
               <details className="mt-4 text-left">
                 <summary className="cursor-pointer text-sm text-gray-500 hover:text-gray-700">
                   Fehlerdetails (Entwicklung)
                 </summary>
                 <pre className="mt-2 text-xs bg-gray-100 p-2 rounded overflow-auto">
-                  {this.state.error && this.state.error.toString()}
+                  {this.state.error.toString()}
                   <br />
-                  {this.state.errorInfo.componentStack}
+                  {this.state.errorInfo?.componentStack}
                 </pre>
               </details>
             )}

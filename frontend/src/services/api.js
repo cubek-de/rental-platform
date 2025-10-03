@@ -64,6 +64,7 @@ export const authService = {
 export const vehicleService = {
   getAllVehicles: (params) => api.get("/api/vehicles", { params }),
   getVehicle: (slug) => api.get(`/api/vehicles/${slug}`),
+  getVehicleBySlug: (slug) => api.get(`/api/vehicles/${slug}`),
   checkAvailability: (id, startDate, endDate) =>
     api.get(`/api/vehicles/${id}/availability`, {
       params: { startDate, endDate },

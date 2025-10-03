@@ -52,8 +52,9 @@ const LandingPage = () => {
   const navigate = useNavigate();
   const [searchData, setSearchData] = useState({
     destination: "Deutschland",
-    startDate: "2025-09-06",
-    endDate: "2025-09-20",
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    category: "",
     persons: "1 Erwachsener, 0 Kinder",
   });
 
@@ -153,7 +154,22 @@ const LandingPage = () => {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    navigate("/vehicles");
+    
+    // Build search parameters for the vehicles page
+    const searchParams = new URLSearchParams();
+    
+    if (searchData.startDate) {
+      searchParams.set('startDate', searchData.startDate);
+    }
+    if (searchData.endDate) {
+      searchParams.set('endDate', searchData.endDate);
+    }
+    if (searchData.category) {
+      searchParams.set('category', searchData.category);
+    }
+    
+    // Navigate to vehicles page with search parameters
+    navigate(`/vehicles?${searchParams.toString()}`);
   };
 
   return (
@@ -205,7 +221,7 @@ const LandingPage = () => {
                   <Button
                     as={Link}
                     to="/dashboard"
-                    className="bg-primary-500 hover:bg-primary-600 text-white focus:text-white font-semibold px-6 py-2.5 rounded-full focus:ring-4 focus:ring-primary-300"
+                    className="bg-primary-500 hover:bg-primary-600 text-white"
                   >
                     Dashboard
                   </Button>
@@ -224,153 +240,166 @@ const LandingPage = () => {
         </div>
       </header>
 
-      {/* Hero Section with Carousel */}
+      {/* Hero Section with Enhanced Visuals */}
       <section className="relative bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white overflow-hidden min-h-screen">
-        {/* Background Image Carousel */}
+        {/* Background Image with Better Sizing */}
         <div className="absolute inset-0">
           <img
             src="https://926c016b950324a3223fa88ada4966be.cdn.bubble.io/cdn-cgi/image/w=3072,h=,f=auto,dpr=1,fit=contain/f1737643227664x655652090428890500/3300_R50_700-MEG_EX%2BBP-UKBroschuere_7384.png"
             alt="Luxus Wohnmobil"
-            className="w-full h-full object-cover object-center"
-            style={{ objectPosition: "center 45%" }}
+            className="w-full h-full object-cover object-center scale-105 transform transition-transform duration-20000 hover:scale-110"
+            style={{ objectPosition: "center 30%", minHeight: "100vh" }}
             onError={(e) => {
               e.target.src =
-                "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80";
+                "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?ixlib=rb-4.0.3&auto=format&fit=crop&w=3840&q=80";
             }}
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/40 to-black/60"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-transparent"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent"></div>
         </div>
 
-        {/* Hero Content */}
-        <div className="relative z-10 w-full px-4 pt-20 pb-40 flex items-center min-h-[60vh]">
-          <div className="max-w-4xl ml-0 lg:ml-16">
-            <div className="transition-all duration-1000 translate-y-0 opacity-100">
-              <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-white mb-8 leading-tight drop-shadow-2xl">
-                <span className="text-primary-400 animate-pulse">Fair mieten.</span>
+        {/* Hero Content with Enhanced Design */}
+        <div className="relative z-10 w-full px-4 min-h-screen flex items-center">
+          <div className="max-w-6xl ml-0 lg:ml-16">
+            <div className="transition-all duration-1000 translate-y-0 opacity-100 animate-fadeInUp">
+              <div className="mb-6">
+                <span className="inline-block bg-primary-500/20 backdrop-blur-sm text-primary-300 px-4 py-2 rounded-full text-sm font-semibold mb-4 border border-primary-400/30">
+                  🏆 Deutschlands fairste Wohnmobilvermietung
+                </span>
+              </div>
+              <h1 className="text-6xl md:text-8xl font-black text-white mb-8 leading-tight">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-400 via-primary-300 to-blue-300 drop-shadow-lg">
+                  Fair mieten.
+                </span>
                 <br />
-                <span className="text-white">Fair reisen.</span>
+                <span className="text-white drop-shadow-2xl">Fair reisen.</span>
               </h1>
-              <p className="text-xl md:text-2xl lg:text-3xl text-gray-100 mb-10 max-w-3xl leading-relaxed drop-shadow-lg">
-                Begeben Sie sich auf eine stilvolle Reise ohne hohe Kosten.
-                Entdecken Sie unsere erschwinglichen
-                Traum-Wohnmobil-Vermietungen
+              <p className="text-2xl md:text-3xl text-gray-100 mb-12 max-w-3xl leading-relaxed font-light">
+                Begeben Sie sich auf eine <span className="font-semibold text-primary-300">stilvolle Reise</span> ohne hohe Kosten.
+                <br className="hidden md:block" />
+                Entdecken Sie unsere <span className="font-semibold text-primary-300">erschwinglichen Premium-Wohnmobile</span>
               </p>
-              <div className="flex flex-col sm:flex-row gap-5">
+              <div className="flex flex-col sm:flex-row gap-6">
                 <Button
-                  size="lg"
-                  className="bg-primary-500 hover:bg-primary-600 text-white px-10 py-5 text-lg font-bold shadow-2xl hover:shadow-primary-500/50 transform hover:scale-105 transition-all duration-300"
+                  size="xl"
+                  className="bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white px-12 py-5 text-xl font-bold shadow-2xl hover:shadow-primary-500/25 transform hover:scale-105 transition-all duration-300 border-0"
                   onClick={() =>
                     document
                       .getElementById("search-section")
                       .scrollIntoView({ behavior: "smooth" })
                   }
                 >
-                  Jetzt buchen
-                  <HiArrowRight className="ml-2 w-6 h-6" />
+                  <HiSparkles className="mr-3 w-6 h-6" />
+                  Jetzt entdecken
+                  <HiArrowRight className="ml-3 w-6 h-6" />
                 </Button>
                 <Button
-                  size="lg"
-                  color="light"
-                  className="bg-white/20 backdrop-blur-md border-2 border-white text-white hover:bg-white hover:text-primary-600 px-10 py-5 text-lg font-bold shadow-2xl transform hover:scale-105 transition-all duration-300"
+                  size="xl"
+                  className="bg-white/10 backdrop-blur-md border-2 border-white/30 text-white hover:bg-white/20 hover:border-white/50 px-12 py-5 text-xl font-bold shadow-2xl transform hover:scale-105 transition-all duration-300"
                   as={Link}
-                  to="/contact"
+                  to="/vehicles"
                 >
-                  Kontakt aufnehmen
+                  <HiPlay className="mr-3 w-6 h-6" />
+                  Fahrzeuge ansehen
                 </Button>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Revolutionary Modern Search Widget - Repositioned for better UX */}
-        <div id="search-section" className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-20 w-full max-w-6xl px-4">
-          <div className="bg-white/98 backdrop-blur-xl rounded-3xl shadow-2xl border-2 border-white/30 overflow-hidden transform hover:scale-[1.02] transition-all duration-500">
-            {/* Search Header - More prominent */}
-            <div className="bg-gradient-to-r from-primary-500 via-primary-600 to-primary-500 px-8 py-5">
-              <div className="flex items-center justify-center gap-3">
-                <HiSearch className="w-7 h-7 text-white animate-pulse" />
-                <h3 className="text-white font-black text-2xl tracking-wide">
-                  Schnelle Fahrzeugsuche
+        {/* Enhanced Search Widget with Database Integration */}
+        <div className="absolute -bottom-20 left-1/2 transform -translate-x-1/2 z-30 w-full max-w-7xl px-4" id="search-section">
+          <div className="bg-white/98 backdrop-blur-2xl rounded-3xl shadow-2xl border border-white/30 overflow-hidden">
+            {/* Search Header with Gradient */}
+            <div className="bg-gradient-to-r from-primary-600 via-primary-500 to-blue-600 px-8 py-6 relative overflow-hidden">
+              <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23ffffff\" fill-opacity=\"0.1\"%3E%3Ccircle cx=\"30\" cy=\"30\" r=\"2\"%3E%3C/circle%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-30"></div>
+              <div className="relative z-10 text-center">
+                <h3 className="text-white font-bold text-2xl mb-2 flex items-center justify-center">
+                  <HiSparkles className="mr-3 w-6 h-6" />
+                  Finden Sie Ihr perfektes Wohnmobil
+                  <HiSparkles className="ml-3 w-6 h-6" />
                 </h3>
-                <HiSearch className="w-7 h-7 text-white animate-pulse" />
+                <p className="text-white/90 text-sm">Über 100+ Premium-Fahrzeuge verfügbar • Sofortige Bestätigung</p>
               </div>
-              <p className="text-center text-primary-100 text-sm mt-2">
-                Finden Sie Ihr perfektes Wohnmobil in wenigen Klicks
-              </p>
             </div>
 
-            {/* Search Form - Enhanced spacing */}
-            <div className="p-8 bg-gradient-to-br from-gray-50 to-white">
+            {/* Enhanced Search Form */}
+            <div className="p-8">
               <form
                 onSubmit={handleSearch}
-                className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end"
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-end"
               >
-                {/* Start Date */}
+                {/* Start Date with Enhanced Design */}
                 <div className="group">
-                  <label className="block text-sm font-bold text-gray-800 mb-3 uppercase tracking-wide">
-                    <HiCalendar className="inline w-5 h-5 mr-2 text-primary-500" />
+                  <label className="block text-sm font-bold text-gray-800 mb-3 flex items-center">
+                    <HiCalendar className="w-5 h-5 mr-2 text-primary-600" />
                     Startdatum
                   </label>
                   <div className="relative">
                     <input
                       type="date"
                       value={searchData.startDate}
+                      min={new Date().toISOString().split('T')[0]}
                       onChange={(e) =>
                         setSearchData({
                           ...searchData,
                           startDate: e.target.value,
                         })
                       }
-                      className="w-full px-5 py-4 border-2 border-gray-300 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-200 focus:outline-none transition-all duration-300 bg-white hover:border-primary-400 font-medium text-gray-900 shadow-sm hover:shadow-md"
+                      className="w-full px-5 py-4 border-2 border-gray-300 rounded-2xl focus:border-primary-500 focus:ring-4 focus:ring-primary-100 focus:outline-none transition-all duration-300 bg-gray-50 hover:bg-white font-medium text-gray-800 shadow-sm hover:shadow-md"
+                      required
                     />
                   </div>
                 </div>
 
-                {/* End Date */}
+                {/* End Date with Enhanced Design */}
                 <div className="group">
-                  <label className="block text-sm font-bold text-gray-800 mb-3 uppercase tracking-wide">
-                    <HiCalendar className="inline w-5 h-5 mr-2 text-primary-500" />
+                  <label className="block text-sm font-bold text-gray-800 mb-3 flex items-center">
+                    <HiCalendar className="w-5 h-5 mr-2 text-primary-600" />
                     Enddatum
                   </label>
                   <div className="relative">
                     <input
                       type="date"
                       value={searchData.endDate}
+                      min={searchData.startDate || new Date().toISOString().split('T')[0]}
                       onChange={(e) =>
                         setSearchData({
                           ...searchData,
                           endDate: e.target.value,
                         })
                       }
-                      className="w-full px-5 py-4 border-2 border-gray-300 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-200 focus:outline-none transition-all duration-300 bg-white hover:border-primary-400 font-medium text-gray-900 shadow-sm hover:shadow-md"
+                      className="w-full px-5 py-4 border-2 border-gray-300 rounded-2xl focus:border-primary-500 focus:ring-4 focus:ring-primary-100 focus:outline-none transition-all duration-300 bg-gray-50 hover:bg-white font-medium text-gray-800 shadow-sm hover:shadow-md"
+                      required
                     />
                   </div>
                 </div>
 
-                {/* Vehicle Type */}
+                {/* Vehicle Type with Database Categories */}
                 <div className="group">
-                  <label className="block text-sm font-bold text-gray-800 mb-3 uppercase tracking-wide">
-                    <HiLocationMarker className="inline w-5 h-5 mr-2 text-primary-500" />
+                  <label className="block text-sm font-bold text-gray-800 mb-3 flex items-center">
+                    <HiHome className="w-5 h-5 mr-2 text-primary-600" />
                     Fahrzeugtyp
                   </label>
                   <div className="relative">
                     <select
-                      value={searchData.vehicleType || "Wohnmobile"}
+                      value={searchData.category || ""}
                       onChange={(e) =>
                         setSearchData({
                           ...searchData,
-                          vehicleType: e.target.value,
+                          category: e.target.value,
                         })
                       }
-                      className="w-full px-5 py-4 border-2 border-gray-300 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-200 focus:outline-none transition-all duration-300 bg-white hover:border-primary-400 appearance-none cursor-pointer font-medium text-gray-900 shadow-sm hover:shadow-md"
+                      className="w-full px-5 py-4 border-2 border-gray-300 rounded-2xl focus:border-primary-500 focus:ring-4 focus:ring-primary-100 focus:outline-none transition-all duration-300 bg-gray-50 hover:bg-white appearance-none cursor-pointer font-medium text-gray-800 shadow-sm hover:shadow-md"
                     >
-                      <option value="Wohnmobile">Wohnmobile</option>
-                      <option value="Wohnwagen">Wohnwagen</option>
-                      <option value="Kastenwagen">Kastenwagen</option>
+                      <option value="">Alle Fahrzeugtypen</option>
+                      <option value="Wohnmobil">🚐 Wohnmobile</option>
+                      <option value="Wohnwagen">🏠 Wohnwagen</option>
+                      <option value="Kastenwagen">🚙 Kastenwagen</option>
                     </select>
                     <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
                       <svg
-                        className="w-6 h-6 text-gray-500"
+                        className="w-5 h-5 text-gray-500"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -378,7 +407,7 @@ const LandingPage = () => {
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
-                          strokeWidth={2.5}
+                          strokeWidth={2}
                           d="M19 9l-7 7-7-7"
                         />
                       </svg>
@@ -386,17 +415,36 @@ const LandingPage = () => {
                   </div>
                 </div>
 
-                {/* Search Button - More prominent */}
+                {/* Enhanced Search Button */}
                 <div className="group">
                   <button
                     type="submit"
-                    className="w-full bg-gradient-to-r from-primary-500 via-primary-600 to-primary-500 hover:from-primary-600 hover:via-primary-700 hover:to-primary-600 text-white font-black py-4 px-8 rounded-xl shadow-2xl hover:shadow-primary-500/50 transform hover:scale-105 transition-all duration-300 flex items-center justify-center space-x-3 text-lg uppercase tracking-wide"
+                    className="w-full bg-gradient-to-r from-primary-600 via-primary-500 to-blue-600 hover:from-primary-700 hover:via-primary-600 hover:to-blue-700 text-white font-bold py-4 px-8 rounded-2xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 flex items-center justify-center space-x-3 group-hover:bg-gradient-to-l"
                   >
                     <HiSearch className="w-6 h-6" />
-                    <span>Suchen</span>
+                    <span className="text-lg">Verfügbarkeit prüfen</span>
+                    <HiArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </button>
                 </div>
               </form>
+
+              {/* Quick Stats */}
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div className="flex items-center justify-center space-x-2">
+                    <HiCheckCircle className="w-5 h-5 text-green-500" />
+                    <span className="text-sm font-medium text-gray-700">Sofortige Bestätigung</span>
+                  </div>
+                  <div className="flex items-center justify-center space-x-2">
+                    <HiShieldCheck className="w-5 h-5 text-blue-500" />
+                    <span className="text-sm font-medium text-gray-700">Vollversichert</span>
+                  </div>
+                  <div className="flex items-center justify-center space-x-2">
+                    <HiTrendingUp className="w-5 h-5 text-purple-500" />
+                    <span className="text-sm font-medium text-gray-700">Beste Preise</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
