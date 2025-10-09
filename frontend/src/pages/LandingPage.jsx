@@ -688,146 +688,175 @@ const LandingPage = () => {
                   const reviewCount = vehicle?.statistics?.rating?.count || 0;
 
                   return (
-                    <div
+                    <Link
                       key={vehicle._id}
-                      className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden transform hover:-translate-y-2"
+                      to={`/vehicles/${vehicle.slug || vehicle._id}`}
+                      className="block group"
                     >
-                      {/* Premium Badge */}
-                      {vehicle.featured && (
-                        <div className="absolute top-4 left-4 z-10">
-                          <Badge
-                            color="warning"
-                            className="px-3 py-1 flex items-center gap-1"
-                          >
-                            <HiOutlineFire className="h-4 w-4" />
-                            Premium
-                          </Badge>
-                        </div>
-                      )}
-
-                      {/* Image Container */}
-                      <div className="relative h-64 overflow-hidden">
-                        <img
-                          src={imageUrl}
-                          alt={vehicle.name}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                          onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src = FALLBACK_IMAGES[0];
-                          }}
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-
-                        {/* Quick View Button */}
-                        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300">
-                          <Button
-                            size="sm"
-                            className="bg-white/90 text-gray-900 hover:bg-white"
-                            as={Link}
-                            to={`/vehicles/${vehicle.slug || vehicle._id}`}
-                          >
-                            Schnellansicht
-                          </Button>
-                        </div>
-                      </div>
-
-                      {/* Content */}
-                      <div className="p-6">
-                        {/* Title and Location */}
-                        <div className="mb-3">
-                          <h3 className="text-xl font-bold text-gray-900 mb-1 line-clamp-1">
-                            {vehicle.name}
-                          </h3>
-                          <div className="flex items-center text-gray-600 text-sm">
-                            <HiLocationMarker className="h-4 w-4 mr-1" />
-                            <span>{locationLabel}</span>
-                          </div>
-                        </div>
-
-                        {/* Rating */}
-                        {rating > 0 && (
-                          <div className="flex items-center gap-2 mb-3">
-                            <div className="flex items-center">
-                              {[...Array(5)].map((_, i) => (
-                                <HiStar
-                                  key={i}
-                                  className={`h-4 w-4 ${
-                                    i < Math.floor(rating)
-                                      ? "text-yellow-400"
-                                      : "text-gray-300"
-                                  }`}
-                                />
-                              ))}
+                      <div className="relative bg-white rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden transform hover:-translate-y-3 hover:scale-[1.02] border border-gray-100 hover:border-primary-200">
+                        {/* Premium Badge with Brand Colors */}
+                        {vehicle.featured && (
+                          <div className="absolute top-6 left-6 z-10">
+                            <div className="bg-gradient-to-r from-primary-500 to-primary-600 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg flex items-center gap-2">
+                              <HiOutlineFire className="h-4 w-4" />
+                              Premium
                             </div>
-                            <span className="text-sm text-gray-600">
-                              {rating.toFixed(1)} ({reviewCount} Bewertungen)
-                            </span>
                           </div>
                         )}
 
-                        {/* Highlights */}
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          {highlights.map((highlight, index) => (
-                            <Badge key={index} color="gray" className="text-xs">
-                              {highlight}
-                            </Badge>
-                          ))}
+                        {/* Available Badge */}
+                        <div className="absolute top-6 right-6 z-10">
+                          <div className="bg-green-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg flex items-center gap-1">
+                            <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                            Verfügbar
+                          </div>
                         </div>
 
-                        {/* Price and CTA */}
-                        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                          <div>
-                            <p className="text-sm text-gray-500">ab</p>
-                            <p className="text-2xl font-bold text-blue-600">
-                              {formatCurrency(basePrice)}
-                              <span className="text-sm text-gray-500 font-normal">
-                                /Tag
-                              </span>
-                            </p>
+                        {/* Enhanced Image Container */}
+                        <div className="relative h-72 overflow-hidden">
+                          <img
+                            src={imageUrl}
+                            alt={vehicle.name}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = FALLBACK_IMAGES[0];
+                            }}
+                          />
+                          {/* Elegant Overlay */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                          
+                          {/* Floating Action Button */}
+                          <div className="absolute bottom-6 right-6 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-4 group-hover:translate-y-0">
+                            <div className="bg-primary-500 hover:bg-primary-600 text-white p-3 rounded-full shadow-xl hover:shadow-2xl transition-all duration-300">
+                              <HiArrowRight className="h-5 w-5" />
+                            </div>
                           </div>
-                          <Button
-                            color="blue"
-                            size="sm"
-                            as={Link}
-                            to={`/vehicles/${vehicle.slug || vehicle._id}`}
-                            className="group/btn"
-                          >
-                            Details
-                            <HiArrowRight className="ml-2 h-4 w-4 group-hover/btn:translate-x-1 transition-transform" />
-                          </Button>
                         </div>
+
+                        {/* Enhanced Content Section */}
+                        <div className="p-8">
+                          {/* Title and Location with Better Spacing */}
+                          <div className="mb-6">
+                            <h3 className="text-2xl font-bold text-gray-900 mb-3 line-clamp-2 group-hover:text-primary-600 transition-colors duration-300">
+                              {vehicle.name}
+                            </h3>
+                            <div className="flex items-center text-gray-500 text-sm font-medium">
+                              <HiLocationMarker className="h-5 w-5 mr-2 text-primary-500" />
+                              <span>{locationLabel}</span>
+                            </div>
+                          </div>
+
+                          {/* Rating with Enhanced Design */}
+                          {rating > 0 && (
+                            <div className="flex items-center gap-3 mb-6">
+                              <div className="flex items-center bg-yellow-50 px-3 py-1 rounded-full">
+                                {[...Array(5)].map((_, i) => (
+                                  <HiStar
+                                    key={i}
+                                    className={`h-4 w-4 ${
+                                      i < Math.floor(rating)
+                                        ? "text-yellow-400"
+                                        : "text-gray-300"
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                              <span className="text-sm text-gray-600 font-medium">
+                                {rating.toFixed(1)} • {reviewCount} Bewertungen
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Enhanced Highlights with Brand Colors */}
+                          <div className="flex flex-wrap gap-2 mb-8">
+                            {highlights.slice(0, 3).map((highlight, index) => (
+                              <div
+                                key={index}
+                                className="bg-primary-50 text-primary-700 px-3 py-1 rounded-full text-sm font-medium border border-primary-100"
+                              >
+                                {highlight}
+                              </div>
+                            ))}
+                            {highlights.length > 3 && (
+                              <div className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm font-medium">
+                                +{highlights.length - 3} mehr
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Enhanced Price Section */}
+                          <div className="flex items-center justify-between pt-6 border-t border-gray-100">
+                            <div className="flex flex-col">
+                              <span className="text-sm text-gray-500 font-medium mb-1">
+                                Preis ab
+                              </span>
+                              <div className="flex items-baseline gap-1">
+                                <span className="text-3xl font-black text-primary-600">
+                                  {formatCurrency(basePrice)}
+                                </span>
+                                <span className="text-sm text-gray-500 font-medium">
+                                  /Tag
+                                </span>
+                              </div>
+                            </div>
+                            
+                            {/* Call-to-Action */}
+                            <div className="bg-primary-500 group-hover:bg-primary-600 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 flex items-center gap-2 shadow-lg group-hover:shadow-xl">
+                              <span>Details ansehen</span>
+                              <HiArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Subtle Hover Effect Indicator */}
+                        <div className="absolute inset-0 border-2 border-transparent group-hover:border-primary-300 rounded-3xl transition-all duration-300 pointer-events-none"></div>
                       </div>
-                    </div>
+                    </Link>
                   );
                 })}
               </div>
 
-              {/* Pagination */}
+              {/* Enhanced Pagination */}
               {totalPages > 1 && (
-                <div className="flex justify-center mt-12">
-                  <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={handleFeaturedPageChange}
-                    showIcons
-                    className="flex items-center gap-2"
-                  />
+                <div className="flex justify-center mt-16">
+                  <div className="bg-white rounded-2xl shadow-lg p-4 border border-gray-100">
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      onPageChange={handleFeaturedPageChange}
+                      showIcons
+                      className="flex items-center gap-2"
+                      theme={{
+                        pages: {
+                          base: "xs:mt-0 mt-2 inline-flex items-center justify-center",
+                          showIcon: "inline-flex",
+                          previous: {
+                            base: "ml-0 rounded-l-lg border border-gray-300 bg-white py-2 px-3 leading-tight text-gray-500 hover:bg-primary-50 hover:text-primary-600",
+                          },
+                          next: {
+                            base: "rounded-r-lg border border-gray-300 bg-white py-2 px-3 leading-tight text-gray-500 hover:bg-primary-50 hover:text-primary-600",
+                          },
+                        },
+                      }}
+                    />
+                  </div>
                 </div>
               )}
             </>
           )}
 
-          {/* View All Button */}
-          <div className="text-center mt-12">
+          {/* Enhanced View All Button */}
+          <div className="text-center mt-16">
             <Button
-              size="lg"
-              color="blue"
+              size="xl"
               as={Link}
               to="/vehicles"
-              className="inline-flex items-center gap-2"
+              className="bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white px-12 py-4 text-lg font-bold shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 border-0"
             >
-              Alle Fahrzeuge ansehen
-              <HiArrowRight className="h-5 w-5" />
+              <HiSparkles className="mr-3 w-6 h-6" />
+              Alle Fahrzeuge entdecken
+              <HiArrowRight className="ml-3 w-6 h-6" />
             </Button>
           </div>
         </div>
