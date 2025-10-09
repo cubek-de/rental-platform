@@ -38,6 +38,7 @@ import {
   HiTrendingUp,
   HiOutlineSparkles,
   HiOutlineFire,
+  HiEye,
 } from "react-icons/hi";
 import { vehicleService } from "../services/api";
 import {
@@ -224,179 +225,222 @@ const LandingPage = () => {
         </div>
       </header>
 
-      {/* Hero Section with Carousel */}
-      <section className="relative bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white overflow-hidden min-h-screen">
-        {/* Background Image Carousel */}
+      {/* Revolutionary Hero Section */}
+      <section className="relative bg-gradient-to-br from-slate-900 via-primary-900 to-blue-900 text-white overflow-hidden min-h-screen">
+        {/* Dynamic Background with Parallax Effect */}
         <div className="absolute inset-0">
           <img
             src="https://926c016b950324a3223fa88ada4966be.cdn.bubble.io/cdn-cgi/image/w=3072,h=,f=auto,dpr=1,fit=contain/f1737643227664x655652090428890500/3300_R50_700-MEG_EX%2BBP-UKBroschuere_7384.png"
             alt="Luxus Wohnmobil"
-            className="w-full h-full object-cover object-center"
+            className="w-full h-full object-cover object-center scale-110 hover:scale-105 transition-transform duration-[3000ms]"
             style={{ objectPosition: "center 45%" }}
             onError={(e) => {
               e.target.src =
                 "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80";
             }}
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/40 to-black/60"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-primary-900/80 via-slate-900/70 to-blue-900/90"></div>
+
+          {/* Animated Floating Elements */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            <div className="absolute top-20 left-20 w-64 h-64 bg-primary-400/20 rounded-full blur-3xl animate-pulse"></div>
+            <div className="absolute top-60 right-40 w-96 h-96 bg-blue-400/15 rounded-full blur-3xl animate-pulse delay-1000"></div>
+            <div className="absolute bottom-40 left-60 w-80 h-80 bg-purple-400/20 rounded-full blur-3xl animate-pulse delay-500"></div>
+          </div>
         </div>
 
-        {/* Hero Content */}
-        <div className="relative z-10 w-full px-4 pt-20 pb-40 flex items-center min-h-[60vh]">
-          <div className="max-w-4xl ml-0 lg:ml-16">
-            <div className="transition-all duration-1000 translate-y-0 opacity-100">
-              <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-white mb-8 leading-tight drop-shadow-2xl">
-                <span className="text-primary-400 animate-pulse">Fair mieten.</span>
+        {/* Hero Content with Advanced Animations */}
+        <div className="relative z-10 w-full px-4 pt-32 pb-40 flex items-center min-h-screen">
+          <div className="max-w-6xl mx-auto text-center">
+            <div className="space-y-8">
+              {/* Premium Badge */}
+              <div className="inline-flex items-center justify-center mb-8 animate-fade-in-up">
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-gradient-to-r from-primary-400 to-blue-600 rounded-full blur-lg opacity-60 group-hover:opacity-80 transition-opacity duration-500"></div>
+                </div>
+              </div>
+
+              {/* Revolutionary Title */}
+              <h1 className="text-6xl md:text-8xl lg:text-9xl font-black leading-none mb-8 animate-fade-in-up delay-200">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-primary-300 to-blue-300 drop-shadow-2xl">
+                  Fair mieten.
+                </span>
                 <br />
-                <span className="text-white">Fair reisen.</span>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-400 via-white to-blue-400 drop-shadow-2xl animate-pulse">
+                  Fair reisen.
+                </span>
               </h1>
-              <p className="text-xl md:text-2xl lg:text-3xl text-gray-100 mb-10 max-w-3xl leading-relaxed drop-shadow-lg">
-                Begeben Sie sich auf eine stilvolle Reise ohne hohe Kosten.
-                Entdecken Sie unsere erschwinglichen
-                Traum-Wohnmobil-Vermietungen
+
+              {/* Subtitle with Typewriter Effect */}
+              <p className="text-2xl md:text-3xl lg:text-4xl text-gray-200 mb-12 max-w-5xl mx-auto leading-relaxed drop-shadow-xl animate-fade-in-up delay-400">
+                <span className="font-light">Begeben Sie sich auf eine</span>
+                <span className="font-bold text-primary-300 mx-2">
+                  stilvolle Reise
+                </span>
+                <span className="font-light">ohne hohe Kosten.</span>
+                <br />
+                <span className="text-white font-medium">
+                  Entdecken Sie unsere erschwinglichen
+                  Traum-Wohnmobil-Vermietungen
+                </span>
               </p>
-              <div className="flex flex-col sm:flex-row gap-5">
+
+              {/* Enhanced Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-6 justify-center items-center animate-fade-in-up delay-600">
                 <Button
-                  size="lg"
-                  className="bg-primary-500 hover:bg-primary-600 text-white px-10 py-5 text-lg font-bold shadow-2xl hover:shadow-primary-500/50 transform hover:scale-105 transition-all duration-300"
+                  size="xl"
+                  className="group bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white px-16 py-6 text-xl font-bold shadow-2xl hover:shadow-primary-500/50 transform hover:scale-105 transition-all duration-300 border-0 rounded-2xl"
                   onClick={() =>
                     document
                       .getElementById("search-section")
                       .scrollIntoView({ behavior: "smooth" })
                   }
                 >
-                  Jetzt buchen
-                  <HiArrowRight className="ml-2 w-6 h-6" />
+                  <HiSparkles className="mr-3 w-6 h-6 group-hover:animate-spin" />
+                  Jetzt Traumreise starten
+                  <HiArrowRight className="ml-3 w-6 h-6 group-hover:translate-x-1 transition-transform" />
                 </Button>
+
                 <Button
-                  size="lg"
-                  color="light"
-                  className="bg-white/20 backdrop-blur-md border-2 border-white text-white hover:bg-white hover:text-primary-600 px-10 py-5 text-lg font-bold shadow-2xl transform hover:scale-105 transition-all duration-300"
+                  size="xl"
+                  className="group bg-white/10 backdrop-blur-xl border-2 border-white/30 text-white hover:bg-white hover:text-primary-600 px-16 py-6 text-xl font-bold shadow-2xl transform hover:scale-105 transition-all duration-300 rounded-2xl"
                   as={Link}
-                  to="/contact"
+                  to="/vehicles"
                 >
-                  Kontakt aufnehmen
+                  <HiEye className="mr-3 w-6 h-6" />
+                  Fahrzeuge entdecken
                 </Button>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Revolutionary Modern Search Widget - Repositioned for better UX */}
-        <div id="search-section" className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-20 w-full max-w-6xl px-4">
-          <div className="bg-white/98 backdrop-blur-xl rounded-3xl shadow-2xl border-2 border-white/30 overflow-hidden transform hover:scale-[1.02] transition-all duration-500">
-            {/* Search Header - More prominent */}
-            <div className="bg-gradient-to-r from-primary-500 via-primary-600 to-primary-500 px-8 py-5">
-              <div className="flex items-center justify-center gap-3">
-                <HiSearch className="w-7 h-7 text-white animate-pulse" />
-                <h3 className="text-white font-black text-2xl tracking-wide">
-                  Schnelle Fahrzeugsuche
-                </h3>
-                <HiSearch className="w-7 h-7 text-white animate-pulse" />
+        {/* Scroll Indicator */}
+        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
+          <div className="w-6 h-10 border-2 border-white/50 rounded-full flex justify-center">
+            <div className="w-1 h-3 bg-white/70 rounded-full mt-2 animate-pulse"></div>
+          </div>
+        </div>
+      </section>
+
+      {/* Revolutionary Modern Search Widget - Repositioned for better UX */}
+      <section id="search-section" className="py-20 bg-gray-50">
+        <div className="container mx-auto px-4">
+          <div className="max-w-6xl mx-auto">
+            <div className="bg-white/98 backdrop-blur-xl rounded-3xl shadow-2xl border-2 border-white/30 overflow-hidden transform hover:scale-[1.02] transition-all duration-500">
+              {/* Search Header - More prominent */}
+              <div className="bg-gradient-to-r from-primary-500 via-primary-600 to-primary-500 px-8 py-5">
+                <div className="flex items-center justify-center gap-3">
+                  <HiSearch className="w-7 h-7 text-white animate-pulse" />
+                  <h3 className="text-white font-black text-2xl tracking-wide">
+                    Schnelle Fahrzeugsuche
+                  </h3>
+                  <HiSearch className="w-7 h-7 text-white animate-pulse" />
+                </div>
+                <p className="text-center text-primary-100 text-sm mt-2">
+                  Finden Sie Ihr perfektes Wohnmobil in wenigen Klicks
+                </p>
               </div>
-              <p className="text-center text-primary-100 text-sm mt-2">
-                Finden Sie Ihr perfektes Wohnmobil in wenigen Klicks
-              </p>
-            </div>
 
-            {/* Search Form - Enhanced spacing */}
-            <div className="p-8 bg-gradient-to-br from-gray-50 to-white">
-              <form
-                onSubmit={handleSearch}
-                className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end"
-              >
-                {/* Start Date */}
-                <div className="group">
-                  <label className="block text-sm font-bold text-gray-800 mb-3 uppercase tracking-wide">
-                    <HiCalendar className="inline w-5 h-5 mr-2 text-primary-500" />
-                    Startdatum
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="date"
-                      value={searchData.startDate}
-                      onChange={(e) =>
-                        setSearchData({
-                          ...searchData,
-                          startDate: e.target.value,
-                        })
-                      }
-                      className="w-full px-5 py-4 border-2 border-gray-300 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-200 focus:outline-none transition-all duration-300 bg-white hover:border-primary-400 font-medium text-gray-900 shadow-sm hover:shadow-md"
-                    />
-                  </div>
-                </div>
-
-                {/* End Date */}
-                <div className="group">
-                  <label className="block text-sm font-bold text-gray-800 mb-3 uppercase tracking-wide">
-                    <HiCalendar className="inline w-5 h-5 mr-2 text-primary-500" />
-                    Enddatum
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="date"
-                      value={searchData.endDate}
-                      onChange={(e) =>
-                        setSearchData({
-                          ...searchData,
-                          endDate: e.target.value,
-                        })
-                      }
-                      className="w-full px-5 py-4 border-2 border-gray-300 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-200 focus:outline-none transition-all duration-300 bg-white hover:border-primary-400 font-medium text-gray-900 shadow-sm hover:shadow-md"
-                    />
-                  </div>
-                </div>
-
-                {/* Vehicle Type */}
-                <div className="group">
-                  <label className="block text-sm font-bold text-gray-800 mb-3 uppercase tracking-wide">
-                    <HiLocationMarker className="inline w-5 h-5 mr-2 text-primary-500" />
-                    Fahrzeugtyp
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={searchData.vehicleType || "Wohnmobile"}
-                      onChange={(e) =>
-                        setSearchData({
-                          ...searchData,
-                          vehicleType: e.target.value,
-                        })
-                      }
-                      className="w-full px-5 py-4 border-2 border-gray-300 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-200 focus:outline-none transition-all duration-300 bg-white hover:border-primary-400 appearance-none cursor-pointer font-medium text-gray-900 shadow-sm hover:shadow-md"
-                    >
-                      <option value="Wohnmobile">Wohnmobile</option>
-                      <option value="Wohnwagen">Wohnwagen</option>
-                      <option value="Kastenwagen">Kastenwagen</option>
-                    </select>
-                    <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
-                      <svg
-                        className="w-6 h-6 text-gray-500"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2.5}
-                          d="M19 9l-7 7-7-7"
-                        />
-                      </svg>
+              {/* Search Form - Enhanced spacing */}
+              <div className="p-8 bg-gradient-to-br from-gray-50 to-white">
+                <form
+                  onSubmit={handleSearch}
+                  className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end"
+                >
+                  {/* Start Date */}
+                  <div className="group">
+                    <label className="block text-sm font-bold text-gray-800 mb-3 uppercase tracking-wide">
+                      <HiCalendar className="inline w-5 h-5 mr-2 text-primary-500" />
+                      Startdatum
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="date"
+                        value={searchData.startDate}
+                        onChange={(e) =>
+                          setSearchData({
+                            ...searchData,
+                            startDate: e.target.value,
+                          })
+                        }
+                        className="w-full px-5 py-4 border-2 border-gray-300 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-200 focus:outline-none transition-all duration-300 bg-white hover:border-primary-400 font-medium text-gray-900 shadow-sm hover:shadow-md"
+                      />
                     </div>
                   </div>
-                </div>
 
-                {/* Search Button - More prominent */}
-                <div className="group">
-                  <button
-                    type="submit"
-                    className="w-full bg-gradient-to-r from-primary-500 via-primary-600 to-primary-500 hover:from-primary-600 hover:via-primary-700 hover:to-primary-600 text-white font-black py-4 px-8 rounded-xl shadow-2xl hover:shadow-primary-500/50 transform hover:scale-105 transition-all duration-300 flex items-center justify-center space-x-3 text-lg uppercase tracking-wide"
-                  >
-                    <HiSearch className="w-6 h-6" />
-                    <span>Suchen</span>
-                  </button>
-                </div>
-              </form>
+                  {/* End Date */}
+                  <div className="group">
+                    <label className="block text-sm font-bold text-gray-800 mb-3 uppercase tracking-wide">
+                      <HiCalendar className="inline w-5 h-5 mr-2 text-primary-500" />
+                      Enddatum
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="date"
+                        value={searchData.endDate}
+                        onChange={(e) =>
+                          setSearchData({
+                            ...searchData,
+                            endDate: e.target.value,
+                          })
+                        }
+                        className="w-full px-5 py-4 border-2 border-gray-300 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-200 focus:outline-none transition-all duration-300 bg-white hover:border-primary-400 font-medium text-gray-900 shadow-sm hover:shadow-md"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Vehicle Type */}
+                  <div className="group">
+                    <label className="block text-sm font-bold text-gray-800 mb-3 uppercase tracking-wide">
+                      <HiLocationMarker className="inline w-5 h-5 mr-2 text-primary-500" />
+                      Fahrzeugtyp
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={searchData.vehicleType || "Wohnmobile"}
+                        onChange={(e) =>
+                          setSearchData({
+                            ...searchData,
+                            vehicleType: e.target.value,
+                          })
+                        }
+                        className="w-full px-5 py-4 border-2 border-gray-300 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-200 focus:outline-none transition-all duration-300 bg-white hover:border-primary-400 appearance-none cursor-pointer font-medium text-gray-900 shadow-sm hover:shadow-md"
+                      >
+                        <option value="Wohnmobile">Wohnmobile</option>
+                        <option value="Wohnwagen">Wohnwagen</option>
+                        <option value="Kastenwagen">Kastenwagen</option>
+                      </select>
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
+                        <svg
+                          className="w-6 h-6 text-gray-500"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2.5}
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Search Button - More prominent */}
+                  <div className="group">
+                    <button
+                      type="submit"
+                      className="w-full bg-gradient-to-r from-primary-500 via-primary-600 to-primary-500 hover:from-primary-600 hover:via-primary-700 hover:to-primary-600 text-white font-black py-4 px-8 rounded-xl shadow-2xl hover:shadow-primary-500/50 transform hover:scale-105 transition-all duration-300 flex items-center justify-center space-x-3 text-lg uppercase tracking-wide"
+                    >
+                      <HiSearch className="w-6 h-6" />
+                      <span>Suchen</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
         </div>
@@ -567,89 +611,229 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="py-20 bg-gradient-to-br from-gray-50 to-primary-50">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <span className="inline-block bg-primary-100 text-primary-600 px-4 py-2 rounded-full text-sm font-semibold mb-4 tracking-wide">
-              WIR SIND DIE BESTEN
-            </span>
-            <h2 className="text-4xl md:text-5xl font-black text-gray-900 mb-6">
-              Entdecken Sie die Welt mit Ihrem eigenen Fahrstil
+      {/* Revolutionary Features Section - Redesigned */}
+      <section className="py-24 bg-gradient-to-br from-white via-primary-25 to-gray-50 relative overflow-hidden">
+        {/* Floating Background Elements */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-20 left-10 w-72 h-72 bg-primary-100 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse"></div>
+          <div className="absolute top-40 right-20 w-96 h-96 bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse delay-1000"></div>
+          <div className="absolute bottom-20 left-1/3 w-80 h-80 bg-purple-100 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse delay-500"></div>
+        </div>
+
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="text-center mb-20">
+            {/* Premium Badge */}
+            <div className="inline-flex items-center justify-center mb-8">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-primary-400 to-primary-600 rounded-full blur-lg opacity-60"></div>
+                <div className="relative bg-gradient-to-r from-primary-500 to-primary-600 text-white px-8 py-4 rounded-full font-bold text-lg shadow-2xl flex items-center gap-3">
+                  <div className="w-3 h-3 bg-white rounded-full animate-ping"></div>
+                  <span className="tracking-wide">
+                    PREMIUM WOHNMOBIL ERLEBNIS
+                  </span>
+                  <div className="w-3 h-3 bg-white rounded-full animate-ping delay-300"></div>
+                </div>
+              </div>
+            </div>
+
+            <h2 className="text-5xl md:text-7xl font-black text-gray-900 mb-8 leading-tight">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-gray-900 via-primary-600 to-gray-900">
+                Warum uns über
+              </span>
+              <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-500 via-primary-600 to-blue-600">
+                10.000 Kunden
+              </span>
+              <br />
+              <span className="text-gray-900">vertrauen</span>
             </h2>
+
+            <p className="text-xl md:text-2xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
+              Erleben Sie{" "}
+              <span className="font-bold text-primary-600">
+                erstklassigen Service
+              </span>{" "}
+              und
+              <span className="font-bold text-primary-600">
+                {" "}
+                Premium-Qualität
+              </span>{" "}
+              bei jeder Reise
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          {/* Enhanced Feature Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
             {[
               {
                 icon: HiLocationMarker,
-                title: "Kostenlose Abholung & Rückgabe",
+                title: "Kostenlose Abholung",
+                subtitle: "& Rückgabe",
                 description:
-                  "Ihre Bequemlichkeit ist wichtig. Kostenloser Abhol- und Rückgabeservice für jedes Fahrzeug.",
-                color: "primary",
+                  "Bequemer Service direkt vor Ihrer Haustür. Kostenlos und zuverlässig.",
+                gradient: "from-emerald-500 to-teal-600",
+                bgColor: "bg-emerald-50",
+                iconColor: "text-emerald-600",
+                delay: "delay-0",
               },
               {
                 icon: HiShieldCheck,
-                title: "24/7 Straßenhilfe",
+                title: "24/7 Pannenhilfe",
+                subtitle: "Immer für Sie da",
                 description:
-                  "Egal zu welcher Zeit oder an welchem Ort, unsere 24/7-Pannenhilfe sorgt dafür, dass Sie nie gestrandet sind.",
-                color: "blue",
+                  "Professionelle Hilfe rund um die Uhr, egal wo Sie sich befinden.",
+                gradient: "from-blue-500 to-indigo-600",
+                bgColor: "bg-blue-50",
+                iconColor: "text-blue-600",
+                delay: "delay-150",
               },
               {
                 icon: HiStar,
                 title: "Premium Qualität",
+                subtitle: "Geprüfte Fahrzeuge",
                 description:
-                  "Alle unsere Fahrzeuge werden streng geprüft und nach höchsten Standards gewartet.",
-                color: "yellow",
+                  "Jedes Fahrzeug wird nach höchsten Standards gewartet und geprüft.",
+                gradient: "from-amber-500 to-orange-600",
+                bgColor: "bg-amber-50",
+                iconColor: "text-amber-600",
+                delay: "delay-300",
               },
               {
                 icon: HiUsers,
                 title: "Expertenberatung",
+                subtitle: "Persönlicher Service",
                 description:
-                  "Unser erfahrenes Team berät Sie bei der Auswahl des perfekten Wohnmobils für Ihre Reise.",
-                color: "green",
+                  "Unser Team hilft Ihnen bei der Auswahl des perfekten Wohnmobils.",
+                gradient: "from-purple-500 to-pink-600",
+                bgColor: "bg-purple-50",
+                iconColor: "text-purple-600",
+                delay: "delay-450",
               },
             ].map((feature, index) => (
-              <div key={index} className="group relative">
-                <div className="absolute -inset-1 bg-gradient-to-r from-gray-200 to-gray-300 rounded-3xl opacity-0 group-hover:opacity-100 transition-all duration-500 blur"></div>
-                <Card className="relative bg-white rounded-3xl p-8 border-0 shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 text-center">
+              <div key={index} className={`group ${feature.delay}`}>
+                {/* Card with Advanced Hover Effects */}
+                <div className="relative h-full">
+                  {/* Glow Effect */}
                   <div
-                    className={`w-20 h-20 bg-${feature.color}-100 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300`}
+                    className={`absolute -inset-1 bg-gradient-to-r ${feature.gradient} rounded-3xl opacity-0 group-hover:opacity-20 transition-all duration-700 blur-xl`}
+                  ></div>
+
+                  {/* Main Card */}
+                  <div
+                    className={`relative h-full ${feature.bgColor} backdrop-blur-sm rounded-3xl p-8 border border-white shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:-translate-y-4 hover:scale-105`}
                   >
-                    <feature.icon
-                      className={`w-10 h-10 text-${feature.color}-600`}
-                    />
+                    {/* Icon Container with Animation */}
+                    <div className="mb-8 text-center">
+                      <div
+                        className={`inline-flex items-center justify-center w-20 h-20 bg-white rounded-2xl shadow-lg group-hover:scale-110 transition-all duration-500 ${feature.iconColor}`}
+                      >
+                        <feature.icon className="w-10 h-10" />
+                      </div>
+                    </div>
+
+                    {/* Content */}
+                    <div className="text-center">
+                      <h3 className="text-xl font-bold text-gray-900 mb-2">
+                        {feature.title}
+                      </h3>
+                      <p
+                        className={`text-sm font-semibold mb-4 ${feature.iconColor}`}
+                      >
+                        {feature.subtitle}
+                      </p>
+                      <p className="text-gray-600 leading-relaxed">
+                        {feature.description}
+                      </p>
+                    </div>
+
+                    {/* Floating Elements */}
+                    <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-500">
+                      <div
+                        className={`w-3 h-3 bg-gradient-to-r ${feature.gradient} rounded-full animate-ping`}
+                      ></div>
+                    </div>
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">
-                    {feature.title}
-                  </h3>
-                  <p className="text-gray-600 leading-relaxed">
-                    {feature.description}
-                  </p>
-                </Card>
+                </div>
               </div>
             ))}
+          </div>
+
+          {/* Trust Indicators */}
+          <div className="mt-20 pt-16 border-t border-gray-200">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+              <div className="group">
+                <div className="text-4xl font-black text-primary-600 mb-2 group-hover:scale-110 transition-transform duration-300">
+                  10.000+
+                </div>
+                <div className="text-gray-600 font-medium">
+                  Zufriedene Kunden
+                </div>
+              </div>
+              <div className="group">
+                <div className="text-4xl font-black text-primary-600 mb-2 group-hover:scale-110 transition-transform duration-300">
+                  99%
+                </div>
+                <div className="text-gray-600 font-medium">
+                  Weiterempfehlungsrate
+                </div>
+              </div>
+              <div className="group">
+                <div className="text-4xl font-black text-primary-600 mb-2 group-hover:scale-110 transition-transform duration-300">
+                  50+
+                </div>
+                <div className="text-gray-600 font-medium">
+                  Premium Fahrzeuge
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Featured Vehicles */}
+      {/* Premium Featured Vehicles Showcase */}
       <section
         id="featured-vehicles"
-        className="py-20 bg-gradient-to-b from-gray-50 to-white"
+        className="py-24 bg-gradient-to-br from-white via-gray-50 to-primary-50 relative overflow-hidden"
       >
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <div className="flex items-center justify-center gap-2 mb-4">
-              <HiOutlineSparkles className="h-8 w-8 text-yellow-500 animate-pulse" />
-              <h2 className="text-4xl font-bold text-gray-900">
-                AUSGEWÄHLTE FAHRZEUGE
-              </h2>
-              <HiOutlineSparkles className="h-8 w-8 text-yellow-500 animate-pulse" />
+        {/* Floating Background Elements */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-20 left-20 w-80 h-80 bg-primary-100 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-pulse"></div>
+          <div className="absolute bottom-20 right-20 w-96 h-96 bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse delay-1000"></div>
+        </div>
+
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="text-center mb-20">
+            {/* Premium Badge */}
+            <div className="inline-flex items-center justify-center mb-8">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full blur-lg opacity-60"></div>
+                <div className="relative bg-gradient-to-r from-yellow-500 to-orange-600 text-white px-8 py-4 rounded-full font-bold text-lg shadow-2xl flex items-center gap-3">
+                  <HiOutlineSparkles className="w-6 h-6 animate-spin" />
+                  <span className="tracking-wide">PREMIUM AUSWAHL</span>
+                  <HiOutlineSparkles className="w-6 h-6 animate-spin" />
+                </div>
+              </div>
             </div>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Unsere Premium Wohnmobile - Handverlesen für unvergessliche
-              Reiseerlebnisse
+
+            <h2 className="text-5xl md:text-6xl font-black text-gray-900 mb-6 leading-tight">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-gray-900 via-primary-600 to-blue-600">
+                Handverlesene
+              </span>
+              <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-500 via-yellow-500 to-orange-500">
+                Traum-Wohnmobile
+              </span>
+            </h2>
+
+            <p className="text-xl md:text-2xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
+              Jedes Fahrzeug ein{" "}
+              <span className="font-bold text-primary-600">
+                Meisterwerk der Mobilität
+              </span>{" "}
+              - Speziell ausgewählt für{" "}
+              <span className="font-bold text-primary-600">
+                unvergessliche Abenteuer
+              </span>
             </p>
           </div>
 
@@ -725,7 +909,7 @@ const LandingPage = () => {
                           />
                           {/* Elegant Overlay */}
                           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                          
+
                           {/* Floating Action Button */}
                           <div className="absolute bottom-6 right-6 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-4 group-hover:translate-y-0">
                             <div className="bg-primary-500 hover:bg-primary-600 text-white p-3 rounded-full shadow-xl hover:shadow-2xl transition-all duration-300">
@@ -800,7 +984,7 @@ const LandingPage = () => {
                                 </span>
                               </div>
                             </div>
-                            
+
                             {/* Call-to-Action */}
                             <div className="bg-primary-500 group-hover:bg-primary-600 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 flex items-center gap-2 shadow-lg group-hover:shadow-xl">
                               <span>Details ansehen</span>
@@ -852,7 +1036,7 @@ const LandingPage = () => {
               size="xl"
               as={Link}
               to="/vehicles"
-              className="bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white px-12 py-4 text-lg font-bold shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 border-0"
+              className="bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white hover:text-white px-12 py-4 text-lg font-bold shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 border-0 focus:text-white active:text-white"
             >
               <HiSparkles className="mr-3 w-6 h-6" />
               Alle Fahrzeuge entdecken
