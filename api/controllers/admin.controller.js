@@ -1248,16 +1248,204 @@ const rejectBooking = async (req, res) => {
             to: booking.user.email,
             subject: "Buchungsablehnung & Rückerstattung - WohnmobilTraum",
             html: `
-              <h1>Buchung abgelehnt</h1>
-              <p>Sehr geehrte/r ${booking.user.firstName} ${booking.user.lastName},</p>
-              <p>Ihre Buchung <strong>#${booking.bookingNumber}</strong> wurde leider abgelehnt.</p>
-              <h3>Ablehnungsgrund:</h3>
-              <p>${reason || "Von Administrator abgelehnt"}</p>
-              <h3>Rückerstattung:</h3>
-              <p>Der Betrag von <strong>€${refundInfo.amount.toFixed(2)}</strong> wurde zurückerstattet.</p>
-              <p>Die Rückerstattung wird in 5-10 Werktagen auf Ihrem Konto erscheinen.</p>
-              <p>Bei Fragen stehen wir Ihnen gerne zur Verfügung.</p>
-              <p>Mit freundlichen Grüßen,<br>Ihr WohnmobilTraum Team</p>
+              <!DOCTYPE html>
+              <html lang="de">
+              <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Buchung abgelehnt</title>
+              </head>
+              <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5;">
+                <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 20px;">
+                  <tr>
+                    <td align="center">
+                      <!-- Main Container -->
+                      <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+
+                        <!-- Header with Red Gradient -->
+                        <tr>
+                          <td style="background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%); padding: 40px 30px; text-align: center;">
+                            <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                              ⚠️ Buchung abgelehnt
+                            </h1>
+                          </td>
+                        </tr>
+
+                        <!-- Content Section -->
+                        <tr>
+                          <td style="padding: 40px 30px;">
+                            <!-- Greeting -->
+                            <p style="margin: 0 0 24px 0; font-size: 16px; color: #374151; line-height: 1.6;">
+                              Sehr geehrte/r <strong>${booking.user.firstName} ${booking.user.lastName}</strong>,
+                            </p>
+
+                            <!-- Main Message -->
+                            <div style="background: #FEF2F2; border-left: 4px solid #DC2626; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+                              <p style="margin: 0; font-size: 16px; color: #374151; line-height: 1.6;">
+                                Ihre Buchung <strong style="color: #DC2626;">#${booking.bookingNumber}</strong> wurde leider abgelehnt.
+                              </p>
+                            </div>
+
+                            <!-- Booking Details Box -->
+                            <div style="background: #F9FAFB; border-radius: 12px; padding: 24px; margin-bottom: 30px;">
+                              <h2 style="margin: 0 0 16px 0; font-size: 18px; color: #DC2626; font-weight: 600;">
+                                📋 Ablehnungsgrund
+                              </h2>
+                              <p style="margin: 0; font-size: 15px; color: #1F2937; background: white; padding: 16px; border-radius: 8px; border: 1px solid #E5E7EB;">
+                                ${reason || "Von Administrator abgelehnt"}
+                              </p>
+                            </div>
+
+                            <!-- Refund Information -->
+                            <div style="background: linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%); border-radius: 12px; padding: 24px; margin-bottom: 30px;">
+                              <h2 style="margin: 0 0 16px 0; font-size: 18px; color: #1E40AF; font-weight: 600;">
+                                💳 Rückerstattung
+                              </h2>
+                              <div style="background: white; border-radius: 8px; padding: 20px; margin-bottom: 12px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                  <span style="font-size: 15px; color: #6B7280;">Rückerstattungsbetrag:</span>
+                                  <span style="font-size: 24px; font-weight: 700; color: #059669;">€${refundInfo.amount.toFixed(2)}</span>
+                                </div>
+                              </div>
+                              <p style="margin: 0; font-size: 14px; color: #1F2937; line-height: 1.6;">
+                                ✓ Die Rückerstattung wurde erfolgreich verarbeitet<br>
+                                ✓ Der Betrag wird in <strong>5-10 Werktagen</strong> auf Ihrem Konto erscheinen
+                              </p>
+                            </div>
+
+                            <!-- Support Section -->
+                            <div style="background: #F0FDF4; border: 1px solid #86EFAC; border-radius: 12px; padding: 20px; margin-bottom: 30px;">
+                              <p style="margin: 0; font-size: 14px; color: #166534; line-height: 1.6;">
+                                <strong>💬 Haben Sie Fragen?</strong><br>
+                                Unser Support-Team steht Ihnen gerne zur Verfügung. Kontaktieren Sie uns bei Unklarheiten bezüglich der Ablehnung oder Rückerstattung.
+                              </p>
+                            </div>
+
+                            <!-- Closing -->
+                            <p style="margin: 0; font-size: 15px; color: #374151; line-height: 1.6;">
+                              Mit freundlichen Grüßen,<br>
+                              <strong style="color: #1F2937;">Ihr WohnmobilTraum Team</strong>
+                            </p>
+                          </td>
+                        </tr>
+
+                        <!-- Footer -->
+                        <tr>
+                          <td style="background: #F9FAFB; padding: 24px 30px; border-top: 1px solid #E5E7EB;">
+                            <p style="margin: 0; font-size: 12px; color: #9CA3AF; text-align: center; line-height: 1.5;">
+                              © ${new Date().getFullYear()} WohnmobilTraum. Alle Rechte vorbehalten.<br>
+                              Diese E-Mail wurde automatisch generiert. Bitte nicht direkt antworten.
+                            </p>
+                          </td>
+                        </tr>
+
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </body>
+              </html>
+            `,
+          });
+        } catch (emailError) {
+          console.error("Email error (non-critical):", emailError.message);
+        }
+      } else {
+        // Send email for rejection without refund
+        const sendEmail = require("../utils/sendEmail");
+        try {
+          await sendEmail({
+            to: booking.user.email,
+            subject: "Buchungsablehnung - WohnmobilTraum",
+            html: `
+              <!DOCTYPE html>
+              <html lang="de">
+              <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Buchung abgelehnt</title>
+              </head>
+              <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5;">
+                <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 20px;">
+                  <tr>
+                    <td align="center">
+                      <!-- Main Container -->
+                      <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+
+                        <!-- Header with Red Gradient -->
+                        <tr>
+                          <td style="background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%); padding: 40px 30px; text-align: center;">
+                            <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                              ⚠️ Buchung abgelehnt
+                            </h1>
+                          </td>
+                        </tr>
+
+                        <!-- Content Section -->
+                        <tr>
+                          <td style="padding: 40px 30px;">
+                            <!-- Greeting -->
+                            <p style="margin: 0 0 24px 0; font-size: 16px; color: #374151; line-height: 1.6;">
+                              Sehr geehrte/r <strong>${booking.user.firstName} ${booking.user.lastName}</strong>,
+                            </p>
+
+                            <!-- Main Message -->
+                            <div style="background: #FEF2F2; border-left: 4px solid #DC2626; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+                              <p style="margin: 0; font-size: 16px; color: #374151; line-height: 1.6;">
+                                Ihre Buchung <strong style="color: #DC2626;">#${booking.bookingNumber}</strong> wurde leider abgelehnt.
+                              </p>
+                            </div>
+
+                            <!-- Booking Details Box -->
+                            <div style="background: #F9FAFB; border-radius: 12px; padding: 24px; margin-bottom: 30px;">
+                              <h2 style="margin: 0 0 16px 0; font-size: 18px; color: #DC2626; font-weight: 600;">
+                                📋 Ablehnungsgrund
+                              </h2>
+                              <p style="margin: 0; font-size: 15px; color: #1F2937; background: white; padding: 16px; border-radius: 8px; border: 1px solid #E5E7EB;">
+                                ${reason || "Von Administrator abgelehnt"}
+                              </p>
+                            </div>
+
+                            <!-- Support Section -->
+                            <div style="background: #F0FDF4; border: 1px solid #86EFAC; border-radius: 12px; padding: 20px; margin-bottom: 30px;">
+                              <p style="margin: 0; font-size: 14px; color: #166534; line-height: 1.6;">
+                                <strong>💬 Haben Sie Fragen?</strong><br>
+                                Unser Support-Team steht Ihnen gerne zur Verfügung. Kontaktieren Sie uns bei Unklarheiten bezüglich der Ablehnung.
+                              </p>
+                            </div>
+
+                            <!-- Alternative Booking Suggestion -->
+                            <div style="background: #EEF2FF; border-radius: 12px; padding: 20px; margin-bottom: 30px;">
+                              <p style="margin: 0; font-size: 14px; color: #3730A3; line-height: 1.6;">
+                                <strong>🚐 Weiter suchen?</strong><br>
+                                Schauen Sie sich gerne unsere anderen verfügbaren Fahrzeuge an. Wir haben viele tolle Wohnmobile für Ihr nächstes Abenteuer!
+                              </p>
+                            </div>
+
+                            <!-- Closing -->
+                            <p style="margin: 0; font-size: 15px; color: #374151; line-height: 1.6;">
+                              Mit freundlichen Grüßen,<br>
+                              <strong style="color: #1F2937;">Ihr WohnmobilTraum Team</strong>
+                            </p>
+                          </td>
+                        </tr>
+
+                        <!-- Footer -->
+                        <tr>
+                          <td style="background: #F9FAFB; padding: 24px 30px; border-top: 1px solid #E5E7EB;">
+                            <p style="margin: 0; font-size: 12px; color: #9CA3AF; text-align: center; line-height: 1.5;">
+                              © ${new Date().getFullYear()} WohnmobilTraum. Alle Rechte vorbehalten.<br>
+                              Diese E-Mail wurde automatisch generiert. Bitte nicht direkt antworten.
+                            </p>
+                          </td>
+                        </tr>
+
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </body>
+              </html>
             `,
           });
         } catch (emailError) {
