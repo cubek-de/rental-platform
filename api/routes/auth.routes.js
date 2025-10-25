@@ -25,9 +25,9 @@ const registerValidation = [
   body("password")
     .isLength({ min: 8 })
     .withMessage("Passwort muss mindestens 8 Zeichen lang sein")
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
+    .matches(/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*?&\s]{8,}$/)
     .withMessage(
-      "Passwort muss mindestens einen Großbuchstaben, einen Kleinbuchstaben, eine Zahl und ein Sonderzeichen enthalten"
+      "Passwort muss mindestens 8 Zeichen lang sein und mindestens einen Buchstaben und eine Zahl enthalten"
     ),
   body("phone")
     .optional()

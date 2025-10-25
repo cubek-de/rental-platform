@@ -354,9 +354,32 @@ const getAgentAnalytics = async (req, res) => {
   }
 };
 
+// Upload vehicle image
+const uploadVehicleImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "Kein Bild hochgeladen" });
+    }
+
+    // Image is already uploaded to Cloudinary by multer middleware
+    res.status(200).json({
+      success: true,
+      imageUrl: req.file.path, // Cloudinary URL from multer-storage-cloudinary
+      publicId: req.file.filename, // Cloudinary public ID
+    });
+  } catch (error) {
+    console.error("Image upload error:", error);
+    res.status(500).json({
+      message: "Fehler beim Hochladen des Bildes",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getDashboard,
   getMyVehicles,
   getMyBookings,
   getAgentAnalytics,
+  uploadVehicleImage,
 };

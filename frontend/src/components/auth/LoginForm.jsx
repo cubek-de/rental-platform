@@ -13,7 +13,9 @@ const LoginForm = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const from = location.state?.from?.pathname || "/dashboard";
+  // Get redirect from query params or state
+  const searchParams = new URLSearchParams(location.search);
+  const redirect = searchParams.get('redirect') || location.state?.from?.pathname;
 
   const validationSchema = Yup.object({
     email: Yup.string()
@@ -28,8 +30,9 @@ const LoginForm = () => {
 
     try {
       const result = await login(values.email, values.password);
-      // Navigate to role-specific dashboard or the original requested page
-      navigate(result.redirectPath || from, { replace: true });
+      // Navigate to redirect URL (booking) or role-specific dashboard
+      // If there's a redirect param (like from booking), use that. Otherwise use role-based redirect
+      navigate(redirect || result.redirectPath, { replace: true });
     } catch (err) {
       console.error("Login error:", err);
       setError(

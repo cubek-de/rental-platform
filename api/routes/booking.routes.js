@@ -16,8 +16,12 @@ const bookingValidation = [
     .notEmpty()
     .withMessage("Führerscheinnummer erforderlich"),
   body("paymentMethod")
-    .isIn(["stripe", "paypal", "bank_transfer", "cash"])
+    .isIn(["stripe", "paypal", "bank_transfer", "cash", "split_payment"])
     .withMessage("Ungültige Zahlungsmethode"),
+  body("insurance")
+    .optional()
+    .isIn(["basic", "standard", "premium"])
+    .withMessage("Ungültige Versicherungsoption"),
 ];
 
 // All routes require authentication
@@ -45,6 +49,13 @@ router.post(
   "/:id/check-out",
   authorize("agent", "admin"),
   bookingController.processCheckOut
+);
+
+// Cancel booking
+router.post(
+  "/:id/cancel",
+  body("reason").optional().isString(),
+  bookingController.cancelBooking
 );
 
 module.exports = router;

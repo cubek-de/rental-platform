@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect } from "react";
+import { createContext, useState, useEffect, useRef } from "react";
 import axios from "axios";
 import api from "../services/api";
 
@@ -11,6 +11,7 @@ const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem("token") || null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const hasLoadedUser = useRef(false);
 
   // Set up axios defaults
   axios.defaults.baseURL =
@@ -30,8 +31,15 @@ const AuthProvider = ({ children }) => {
     const loadUser = async () => {
       if (!token) {
         setLoading(false);
+        hasLoadedUser.current = false;
         return;
       }
+
+      // Prevent duplicate calls in React Strict Mode
+      if (hasLoadedUser.current) {
+        return;
+      }
+      hasLoadedUser.current = true;
 
       try {
         const res = await axios.get("/api/auth/me");
@@ -39,6 +47,15 @@ const AuthProvider = ({ children }) => {
         setError(null);
       } catch (err) {
         console.error("Error loading user:", err);
+
+        // Handle rate limiting gracefully
+        if (err.response?.status === 429) {
+          console.warn("Rate limit reached - please wait before refreshing");
+          setLoading(false);
+          hasLoadedUser.current = false; // Allow retry later
+          return;
+        }
+
         setError(
           err.response?.data?.message || "Fehler beim Laden des Benutzers"
         );

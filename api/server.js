@@ -148,7 +148,7 @@ app.use(cors(corsOptions));
 // Rate limiting configurations
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
+  max: 500, // Increased from 100 to 500 for development (React Strict Mode doubles API calls)
   message:
     "Zu viele Anfragen von dieser IP, bitte versuchen Sie es später erneut.",
   standardHeaders: true,
@@ -157,7 +157,7 @@ const generalLimiter = rateLimit({
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 50, // Increased from 5 to 50 for testing
+  max: 100, // Increased from 50 to 100 for testing
   message:
     "Zu viele Anmeldeversuche, bitte versuchen Sie es in 15 Minuten erneut.",
   skipSuccessfulRequests: true,
@@ -173,7 +173,7 @@ const paymentLimiter = rateLimit({
 app.use("/api", generalLimiter);
 app.use("/api/auth/login", authLimiter);
 app.use("/api/auth/register", authLimiter);
-app.use("/api/payments", paymentLimiter);
+app.use("/api/payment", paymentLimiter);
 
 // Body parsing middleware
 app.use(express.json({ limit: "10mb" }));
@@ -239,6 +239,7 @@ const bookingRoutes = require("./routes/booking.routes");
 const paymentRoutes = require("./routes/payment.routes");
 const adminRoutes = require("./routes/admin.routes");
 const agentRoutes = require("./routes/agent.routes");
+const notificationRoutes = require("./routes/notification.routes");
 // const analyticsRoutes = require("./routes/analytics.routes");
 // const reviewRoutes = require("./routes/review.routes");
 // const uploadRoutes = require("./routes/upload.routes");
@@ -248,9 +249,10 @@ app.use("/api/auth", authRoutes);
 // app.use("/api/users", userRoutes);
 app.use("/api/vehicles", vehicleRoutes);
 app.use("/api/bookings", bookingRoutes);
-app.use("/api/payments", paymentRoutes);
+app.use("/api/payment", paymentRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/agent", agentRoutes);
+app.use("/api/notifications", notificationRoutes);
 // app.use("/api/analytics", analyticsRoutes);
 // app.use("/api/reviews", reviewRoutes);
 // app.use("/api/upload", uploadRoutes);
@@ -340,6 +342,68 @@ const server = app.listen(PORT, () => {
     `🚀 Server running on port ${PORT} in ${process.env.NODE_ENV} mode`
   );
 });
+
+// Socket.io setup
+const { Server } = require("socket.io");
+const io = new Server(server, {
+  cors: {
+    origin: [
+      process.env.FRONTEND_URL,
+      "http://localhost:5173",
+      "http://localhost:3001",
+    ],
+    credentials: true,
+    methods: ["GET", "POST"],
+  },
+});
+
+// Socket.io middleware for authentication
+io.use(async (socket, next) => {
+  try {
+    const token = socket.handshake.auth.token;
+    if (!token) {
+      return next(new Error("Authentication error"));
+    }
+
+    const jwt = require("jsonwebtoken");
+    const User = require("./models/User.model");
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id).select("-password");
+
+    if (!user) {
+      return next(new Error("User not found"));
+    }
+
+    socket.userId = user._id.toString();
+    socket.userRole = user.role;
+    next();
+  } catch (error) {
+    next(new Error("Authentication error"));
+  }
+});
+
+// Socket.io connection handling
+io.on("connection", (socket) => {
+  console.log(`✅ User connected: ${socket.userId} (${socket.userRole})`);
+
+  // Join user to their own room
+  socket.join(`user:${socket.userId}`);
+
+  // Join admin to admin room
+  if (socket.userRole === "admin") {
+    socket.join("admins");
+    console.log(`👑 Admin joined admin room: ${socket.userId}`);
+  }
+
+  // Handle disconnect
+  socket.on("disconnect", () => {
+    console.log(`❌ User disconnected: ${socket.userId}`);
+  });
+});
+
+// Make io available to routes
+app.set("io", io);
 
 // Handle unhandled promise rejections
 process.on("unhandledRejection", (err) => {

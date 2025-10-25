@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import React, { useState, useContext, useEffect, useCallback } from "react";
+import React, { useState, useContext, useEffect, useCallback, useRef } from "react";
 import {
   Card,
   Button,
@@ -15,7 +15,7 @@ import {
   Dropdown,
 } from "flowbite-react";
 import { AuthContext } from "../../context/AuthContext";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate, useLocation } from "react-router-dom";
 import api from "../../services/api";
 import toast, { Toaster } from "react-hot-toast";
 import {
@@ -53,6 +53,11 @@ import {
   FiCreditCard,
   FiFileText,
 } from "react-icons/fi";
+import NotificationsPanel from "../../components/admin/NotificationsPanel";
+import PendingVehicles from "../../components/admin/PendingVehicles";
+import PendingBookings from "../../components/admin/PendingBookings";
+import AllBookings from "../../components/admin/AllBookings";
+import DashboardAnalytics from "../../components/admin/DashboardAnalytics";
 
 // AdminProfileContent Component - Integrated within dashboard
 const AdminProfileContent = () => {
@@ -62,6 +67,7 @@ const AdminProfileContent = () => {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
   const [stats, setStats] = useState(null);
+  const hasLoadedStats = useRef(false);
 
   const [profileData, setProfileData] = useState({
     firstName: user?.firstName || "",
@@ -87,7 +93,11 @@ const AdminProfileContent = () => {
   });
 
   useEffect(() => {
-    fetchUserStats();
+    if (!hasLoadedStats.current) {
+      hasLoadedStats.current = true;
+      fetchUserStats();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchUserStats = async () => {
@@ -850,7 +860,10 @@ const AdminProfileContent = () => {
 const AdminDashboardPage = () => {
   const { user, loading, logout } = useContext(AuthContext);
   const navigate = useNavigate();
-  const [activeSection, setActiveSection] = useState("dashboard");
+  const location = useLocation();
+  const [activeSection, setActiveSection] = useState(
+    location.state?.activeSection || "dashboard"
+  );
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
   const [showCreateVehicleModal, setShowCreateVehicleModal] = useState(false);
   const [showEditUserModal, setShowEditUserModal] = useState(false);
@@ -864,14 +877,18 @@ const AdminDashboardPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [notifications, setNotifications] = useState(3);
   const [rateLimitError, setRateLimitError] = useState(false);
+  const hasFetchedData = useRef(false);
+  const lastFetchTime = useRef(0);
 
   // Real-time data states
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalVehicles: 0,
+    pendingVehicles: 0,
     totalBookings: 0,
     monthlyRevenue: 0,
     activeBookings: 0,
+    pendingBookings: 0,
     pendingApprovals: 0,
   });
 
@@ -910,6 +927,14 @@ const AdminDashboardPage = () => {
 
   // Fetch real-time data from API
   const fetchDashboardData = useCallback(async () => {
+    // Prevent calls within 2 seconds of each other to avoid rate limiting
+    const now = Date.now();
+    if (now - lastFetchTime.current < 2000) {
+      console.log('Skipping fetch - too soon after last call');
+      return;
+    }
+    lastFetchTime.current = now;
+
     try {
       setIsLoading(true);
 
@@ -937,9 +962,11 @@ const AdminDashboardPage = () => {
       setStats({
         totalUsers: usersData.length, // Use actual users array length
         totalVehicles: vehiclesData.length, // Use actual vehicles array length
+        pendingVehicles: apiStats.pendingVehicles || 0, // Pending vehicle approvals
         totalBookings: apiStats.totalBookings || 0,
         monthlyRevenue: revenueData.monthly || 0,
         activeBookings: apiStats.activeBookings || 0,
+        pendingBookings: apiStats.pendingBookings || 0,
         pendingApprovals: apiStats.pendingReviews || 0,
       });
     } catch (error) {
@@ -963,6 +990,7 @@ const AdminDashboardPage = () => {
       setStats({
         totalUsers: 0,
         totalVehicles: 0,
+        pendingVehicles: 0,
         totalBookings: 0,
         monthlyRevenue: 0,
         activeBookings: 0,
@@ -1023,9 +1051,34 @@ const AdminDashboardPage = () => {
 
   useEffect(() => {
     document.title = "Admin Dashboard | WohnmobilTraum";
-    fetchDashboardData();
-    // Removed automatic refresh interval to prevent rate limiting
-  }, [fetchDashboardData]);
+
+    // Only fetch once to prevent rate limiting
+    if (!hasFetchedData.current) {
+      hasFetchedData.current = true;
+      fetchDashboardData();
+    }
+
+    // Listen for vehicle status changes to refresh stats
+    const handleVehicleStatusChange = () => {
+      fetchDashboardData();
+    };
+
+    window.addEventListener('vehicleStatusChanged', handleVehicleStatusChange);
+
+    return () => {
+      window.removeEventListener('vehicleStatusChanged', handleVehicleStatusChange);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Listen for navigation state changes (from notifications)
+  useEffect(() => {
+    if (location.state?.activeSection) {
+      setActiveSection(location.state.activeSection);
+      // Clear the state after using it
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location, navigate]);
 
   // Create new user via admin endpoint
   const handleCreateUser = async (e) => {
@@ -1201,8 +1254,15 @@ const AdminDashboardPage = () => {
 
   // Open user details modal
   const openUserDetailsModal = (user) => {
-    setSelectedUser(user);
-    setShowUserDetailsModal(true);
+    console.log('Opening user details for:', user);
+    // Ensure we're not accidentally passing a vehicle
+    if (user && user.firstName && user.email) {
+      setSelectedUser(user);
+      setShowUserDetailsModal(true);
+    } else {
+      console.error('Invalid user object:', user);
+      toast.error('Fehler beim Öffnen der Benutzerdetails');
+    }
   };
 
   // Vehicle CRUD functions
@@ -1461,6 +1521,8 @@ const AdminDashboardPage = () => {
 
         {/* Right Section - Refresh Button & User Dropdown */}
         <div className="flex items-center space-x-4">
+          {/* Notifications Panel */}
+          <NotificationsPanel />
           {/* Refresh Button */}
           <Button
             size="sm"
@@ -1597,11 +1659,27 @@ const AdminDashboardPage = () => {
             badge={Array.isArray(vehicles) ? vehicles.length : 0}
           />
           <SidebarItem
+            icon={FiAlertCircle}
+            label="Fahrzeuge Ausstehend"
+            active={activeSection === "pending-vehicles"}
+            onClick={() => setActiveSection("pending-vehicles")}
+            collapsed={false}
+            badge={stats.pendingVehicles || 0}
+          />
+          <SidebarItem
             icon={FiCalendar}
-            label="Buchungen"
+            label="Alle Buchungen"
             active={activeSection === "bookings"}
             onClick={() => setActiveSection("bookings")}
             collapsed={false}
+          />
+          <SidebarItem
+            icon={FiAlertTriangle}
+            label="Buchungen Ausstehend"
+            active={activeSection === "pending-bookings"}
+            onClick={() => setActiveSection("pending-bookings")}
+            collapsed={false}
+            badge={stats.pendingBookings || 0}
           />
           <SidebarItem
             icon={FiActivity}
@@ -1640,164 +1718,13 @@ const AdminDashboardPage = () => {
   );
 
   const DashboardContent = () => (
-    <div className="space-y-8">
-      {/* Statistics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
-        <StatCard
-          icon={FiUsers}
-          title="Gesamte Benutzer"
-          value={stats.totalUsers}
-          change={12.5}
-          gradient="bg-gradient-to-br from-blue-500 to-blue-600"
-          iconBg="bg-blue-600"
-        />
-        <StatCard
-          icon={FiTruck}
-          title="Fahrzeuge"
-          value={stats.totalVehicles}
-          change={8.2}
-          gradient="bg-gradient-to-br from-emerald-500 to-emerald-600"
-          iconBg="bg-emerald-600"
-        />
-        <StatCard
-          icon={FiCalendar}
-          title="Buchungen"
-          value={stats.totalBookings}
-          change={15.3}
-          gradient="bg-gradient-to-br from-purple-500 to-purple-600"
-          iconBg="bg-purple-600"
-        />
-        <StatCard
-          icon={FiDollarSign}
-          title="Monatsumsatz"
-          value={stats.monthlyRevenue}
-          change={-2.1}
-          gradient="bg-gradient-to-br from-orange-500 to-orange-600"
-          iconBg="bg-orange-600"
-        />
-        <StatCard
-          icon={FiActivity}
-          title="Aktive Buchungen"
-          value={stats.activeBookings}
-          gradient="bg-gradient-to-br from-indigo-500 to-indigo-600"
-          iconBg="bg-indigo-600"
-        />
-        <StatCard
-          icon={FiAlertCircle}
-          title="Genehmigungen"
-          value={stats.pendingApprovals}
-          gradient="bg-gradient-to-br from-red-500 to-red-600"
-          iconBg="bg-red-600"
-        />
-      </div>
+    <div className="space-y-6">
+      {/* Analytics Section */}
+      <DashboardAnalytics />
 
-      {/* Charts and Activity Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Recent Activity */}
-        <div className="lg:col-span-2">
-          <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-gray-200/50 p-6 shadow-lg">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900">
-                Letzte Aktivitäten
-              </h3>
-              <div className="flex space-x-2">
-                <Button size="xs" color="light" className="bg-gray-50 border-0">
-                  <FiFilter className="w-4 h-4" />
-                </Button>
-                <Button size="xs" color="light" className="bg-gray-50 border-0">
-                  <FiDownload className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-            <div className="space-y-4">
-              {[
-                {
-                  action: "Neue Buchung eingegangen",
-                  user: "Max Mustermann",
-                  time: "vor 5 Minuten",
-                  type: "booking",
-                  status: "success",
-                },
-                {
-                  action: "Fahrzeug hinzugefügt",
-                  user: "Anna Schmidt",
-                  time: "vor 15 Minuten",
-                  type: "vehicle",
-                  status: "info",
-                },
-                {
-                  action: "Benutzer registriert",
-                  user: "John Doe",
-                  time: "vor 32 Minuten",
-                  type: "user",
-                  status: "success",
-                },
-                {
-                  action: "Zahlung verarbeitet",
-                  user: "Lisa Weber",
-                  time: "vor 1 Stunde",
-                  type: "payment",
-                  status: "success",
-                },
-                {
-                  action: "Bewertung abgegeben",
-                  user: "Tom Mueller",
-                  time: "vor 2 Stunden",
-                  type: "review",
-                  status: "info",
-                },
-              ].map((activity, index) => (
-                <div
-                  key={index}
-                  className="flex items-center p-4 bg-gradient-to-r from-gray-50 to-white rounded-xl border border-gray-100 hover:shadow-md transition-all duration-300"
-                >
-                  <div
-                    className={`w-12 h-12 rounded-xl flex items-center justify-center mr-4 ${
-                      activity.type === "booking"
-                        ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white"
-                        : activity.type === "vehicle"
-                        ? "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white"
-                        : activity.type === "user"
-                        ? "bg-gradient-to-r from-purple-500 to-purple-600 text-white"
-                        : activity.type === "payment"
-                        ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white"
-                        : "bg-gradient-to-r from-indigo-500 to-indigo-600 text-white"
-                    }`}
-                  >
-                    {activity.type === "booking" ? (
-                      <FiCalendar className="w-5 h-5" />
-                    ) : activity.type === "vehicle" ? (
-                      <FiTruck className="w-5 h-5" />
-                    ) : activity.type === "user" ? (
-                      <FiUser className="w-5 h-5" />
-                    ) : activity.type === "payment" ? (
-                      <FiDollarSign className="w-5 h-5" />
-                    ) : (
-                      <FiEye className="w-5 h-5" />
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-900">
-                      {activity.action}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {activity.user} • {activity.time}
-                    </p>
-                  </div>
-                  <div
-                    className={`w-3 h-3 rounded-full ${
-                      activity.status === "success"
-                        ? "bg-emerald-400"
-                        : "bg-blue-400"
-                    }`}
-                  ></div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Quick Stats */}
+      {/* Quick Actions and System Health */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Quick Actions */}
         <div className="space-y-6">
           <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-gray-200/50 p-6 shadow-lg">
             <h3 className="text-lg font-bold text-gray-900 mb-4">
@@ -2127,12 +2054,12 @@ const AdminDashboardPage = () => {
         return <UsersContent />;
       case "vehicles":
         return <VehiclesContent />;
+      case "pending-vehicles":
+        return <PendingVehicles />;
+      case "pending-bookings":
+        return <PendingBookings />;
       case "bookings":
-        return (
-          <div className="text-center py-12">
-            <p className="text-gray-600">Buchungen kommen bald...</p>
-          </div>
-        );
+        return <AllBookings />;
       case "analytics":
         return (
           <div className="text-center py-12">
@@ -3720,7 +3647,9 @@ const AdminDashboardPage = () => {
                     Beschreibung
                   </Label>
                   <p className="text-gray-900 mt-1">
-                    {selectedVehicle.description}
+                    {typeof selectedVehicle.description === 'string'
+                      ? selectedVehicle.description
+                      : selectedVehicle.description?.long || selectedVehicle.description?.short || ''}
                   </p>
                 </div>
               )}

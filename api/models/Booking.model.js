@@ -6,7 +6,7 @@ const bookingSchema = new mongoose.Schema(
     bookingNumber: {
       type: String,
       unique: true,
-      required: true,
+      required: false, // Auto-generated in pre-save hook
       index: true,
     },
     vehicle: {
@@ -107,7 +107,7 @@ const bookingSchema = new mongoose.Schema(
       insurance: {
         type: {
           type: String,
-          enum: ["basic", "comprehensive", "premium"],
+          enum: ["basic", "standard", "comprehensive", "premium"],
         },
         price: Number,
         deductible: Number,
@@ -159,7 +159,7 @@ const bookingSchema = new mongoose.Schema(
     payment: {
       method: {
         type: String,
-        enum: ["stripe", "paypal", "bank_transfer", "cash"],
+        enum: ["stripe", "paypal", "bank_transfer", "cash", "split_payment"],
         required: true,
       },
       status: {
@@ -171,9 +171,35 @@ const bookingSchema = new mongoose.Schema(
           "failed",
           "refunded",
           "partial_refund",
+          "partially_paid",
         ],
         default: "pending",
         index: true,
+      },
+
+      // Split Payment (50% online + 50% cash)
+      splitPayment: {
+        enabled: {
+          type: Boolean,
+          default: false,
+        },
+        onlineAmount: Number,
+        cashAmount: Number,
+        onlinePaymentStatus: {
+          type: String,
+          enum: ["pending", "completed", "failed"],
+          default: "pending",
+        },
+        cashPaymentStatus: {
+          type: String,
+          enum: ["pending", "completed"],
+          default: "pending",
+        },
+        cashPaidAt: Date,
+        cashReceivedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
       },
 
       stripeDetails: {
@@ -200,6 +226,8 @@ const bookingSchema = new mongoose.Schema(
               "partial_refund",
               "deposit_hold",
               "deposit_release",
+              "cash_payment",
+              "online_payment",
             ],
           },
           amount: Number,
@@ -216,6 +244,7 @@ const bookingSchema = new mongoose.Schema(
         dueDate: Date,
         paidAt: Date,
         url: String,
+        cloudinaryId: String,
       },
     },
 

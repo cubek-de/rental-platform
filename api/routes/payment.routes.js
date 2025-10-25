@@ -16,13 +16,16 @@ router.post(
 router.use(protect);
 
 router.post(
-  "/create-intent",
+  "/create-payment-intent",
   body("bookingId").isMongoId().withMessage("Ungültige Buchungs-ID"),
+  body("paymentOption")
+    .isIn(["full", "split"])
+    .withMessage("Ungültige Zahlungsoption (full oder split)"),
   paymentController.createPaymentIntent
 );
 
 router.post(
-  "/confirm",
+  "/confirm-payment",
   body("paymentIntentId")
     .notEmpty()
     .withMessage("Payment Intent ID erforderlich"),
@@ -32,12 +35,20 @@ router.post(
 
 router.get("/:bookingId", paymentController.getPaymentDetails);
 
-// Admin routes
+// Admin/Agent routes
 router.post(
   "/refund",
   authorize("admin"),
   body("bookingId").isMongoId().withMessage("Ungültige Buchungs-ID"),
   paymentController.processRefund
+);
+
+// Mark cash payment as received (for split payments)
+router.post(
+  "/:bookingId/cash-received",
+  authorize("agent", "admin"),
+  body("notes").optional().isString(),
+  paymentController.markCashPaymentReceived
 );
 
 module.exports = router;

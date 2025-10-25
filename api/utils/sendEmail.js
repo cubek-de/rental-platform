@@ -31,10 +31,10 @@ const createTransporter = () => {
 };
 
 // Send email function
-const sendEmail = async ({ to, subject, template, data, attachments = [] }) => {
+const sendEmail = async ({ to, subject, template, html, data, attachments = [] }) => {
   try {
     console.log(
-      `Attempting to send email to: ${to} with template: ${template}`
+      `Attempting to send email to: ${to} with template: ${template || 'direct HTML'}`
     );
 
     const transporter = createTransporter();
@@ -43,26 +43,35 @@ const sendEmail = async ({ to, subject, template, data, attachments = [] }) => {
     await transporter.verify();
     console.log("SMTP connection verified successfully");
 
-    // Load and compile template
-    const templatePath = path.join(
-      __dirname,
-      "../templates/emails",
-      `${template}.hbs`
-    );
+    let emailHtml;
 
-    console.log(`Loading template from: ${templatePath}`);
-    const templateContent = await fs.readFile(templatePath, "utf8");
-    const compiledTemplate = handlebars.compile(templateContent);
+    // If template is provided, load and compile it
+    if (template) {
+      const templatePath = path.join(
+        __dirname,
+        "../templates/emails",
+        `${template}.hbs`
+      );
 
-    // Generate HTML
-    const html = compiledTemplate(data);
+      console.log(`Loading template from: ${templatePath}`);
+      const templateContent = await fs.readFile(templatePath, "utf8");
+      const compiledTemplate = handlebars.compile(templateContent);
+
+      // Generate HTML from template
+      emailHtml = compiledTemplate(data);
+    } else if (html) {
+      // Use direct HTML
+      emailHtml = html;
+    } else {
+      throw new Error("Either template or html must be provided");
+    }
 
     // Email options
     const mailOptions = {
       from: `WohnmobilTraum <${process.env.EMAIL_USER}>`,
       to,
       subject,
-      html,
+      html: emailHtml,
       attachments,
     };
 

@@ -1,8 +1,10 @@
 // backend/controllers/vehicle.controller.js
 const Vehicle = require("../models/Vehicle.model");
 const Booking = require("../models/Booking.model");
+const User = require("../models/User.model");
 const { validationResult } = require("express-validator");
 const cloudinary = require("../config/cloudinary");
+const { createNotification } = require("./notification.controller");
 
 // Get all vehicles with filters
 const getVehicles = async (req, res) => {
@@ -129,9 +131,19 @@ const getVehicle = async (req, res) => {
   try {
     const { slug } = req.params;
 
-    const vehicle = await Vehicle.findOne({ slug })
-      .populate("owner", "firstName lastName email")
-      .lean();
+    // Check if the param is a MongoDB ObjectId or a slug
+    const isObjectId = slug.match(/^[0-9a-fA-F]{24}$/);
+
+    let vehicle;
+    if (isObjectId) {
+      vehicle = await Vehicle.findById(slug)
+        .populate("owner", "firstName lastName email")
+        .lean();
+    } else {
+      vehicle = await Vehicle.findOne({ slug })
+        .populate("owner", "firstName lastName email")
+        .lean();
+    }
 
     if (!vehicle) {
       return res.status(404).json({
@@ -199,11 +211,38 @@ const createVehicle = async (req, res) => {
       await User.findByIdAndUpdate(req.user._id, {
         $push: { "agentProfile.vehicles": vehicle._id },
       });
+
+      // Send notification to all admins
+      const admins = await User.find({ role: "admin", status: "active" });
+      const io = req.app.get("io");
+
+      for (const admin of admins) {
+        await createNotification(
+          {
+            recipient: admin._id,
+            sender: req.user._id,
+            type: "vehicle_pending",
+            title: "Neues Fahrzeug zur Genehmigung",
+            message: `${req.user.firstName} ${req.user.lastName} hat ein neues Fahrzeug "${vehicle.name}" zur Genehmigung eingereicht.`,
+            relatedVehicle: vehicle._id,
+            actionUrl: `/admin/vehicles/pending/${vehicle._id}`,
+            metadata: {
+              vehicleName: vehicle.name,
+              vehicleCategory: vehicle.category,
+              agentName: `${req.user.firstName} ${req.user.lastName}`,
+            },
+          },
+          io
+        );
+      }
     }
 
     res.status(201).json({
       success: true,
-      message: "Fahrzeug erfolgreich erstellt",
+      message:
+        req.user.role === "agent"
+          ? "Fahrzeug erfolgreich erstellt und wartet auf Genehmigung"
+          : "Fahrzeug erfolgreich erstellt",
       data: vehicle,
     });
   } catch (error) {

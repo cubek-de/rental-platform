@@ -122,8 +122,9 @@ const VehicleDetailPage = () => {
       alert("Bitte wählen Sie Start- und Enddatum aus.");
       return;
     }
+    // Pass slug instead of _id so the API can find the vehicle
     navigate(
-      `/booking/new?vehicleId=${vehicle._id}&startDate=${startDate}&endDate=${endDate}`
+      `/booking/new?vehicleSlug=${vehicle.slug}&startDate=${startDate}&endDate=${endDate}`
     );
   };
 

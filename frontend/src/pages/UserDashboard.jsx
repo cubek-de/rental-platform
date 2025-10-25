@@ -661,23 +661,19 @@ const UserDashboard = () => {
                         <div className="flex justify-between items-start">
                           <div>
                             <h4 className="font-semibold text-gray-800">
-                              {booking.vehicle
-                                ? booking.vehicle.make +
-                                  " " +
-                                  booking.vehicle.model
-                                : "Fahrzeug nicht verfügbar"}
+                              {booking.vehicle?.name || "Fahrzeug nicht verfügbar"}
                             </h4>
                             <p className="text-sm text-gray-600 mt-1">
-                              {new Date(booking.startDate).toLocaleDateString(
-                                "de-DE"
-                              )}{" "}
+                              {booking.dates?.start
+                                ? new Date(booking.dates.start).toLocaleDateString("de-DE")
+                                : "Invalid Date"}{" "}
                               -{" "}
-                              {new Date(booking.endDate).toLocaleDateString(
-                                "de-DE"
-                              )}
+                              {booking.dates?.end
+                                ? new Date(booking.dates.end).toLocaleDateString("de-DE")
+                                : "Invalid Date"}
                             </p>
                             <p className="text-sm text-gray-500 mt-1">
-                              Gesamt: €{booking.totalPrice}
+                              Gesamt: €{booking.pricing?.totalAmount?.toFixed(2) || "0.00"}
                             </p>
                           </div>
                           <span
@@ -934,28 +930,26 @@ const UserDashboard = () => {
                             </div>
                             <div className="flex-1">
                               <h4 className="font-bold text-lg text-gray-900 group-hover:text-emerald-700 transition-colors">
-                                {booking.vehicle
-                                  ? `${booking.vehicle.make} ${booking.vehicle.model}`
-                                  : "Fahrzeug nicht verfügbar"}
+                                {booking.vehicle?.name || "Fahrzeug nicht verfügbar"}
                               </h4>
                               <div className="flex items-center text-gray-600 mt-2 space-x-4">
                                 <div className="flex items-center">
                                   <FiCalendarIcon className="w-4 h-4 mr-2" />
                                   <span className="text-sm">
-                                    {new Date(
-                                      booking.startDate
-                                    ).toLocaleDateString("de-DE")}
+                                    {booking.dates?.start
+                                      ? new Date(booking.dates.start).toLocaleDateString("de-DE")
+                                      : "Invalid Date"}
                                     {" - "}
-                                    {new Date(
-                                      booking.endDate
-                                    ).toLocaleDateString("de-DE")}
+                                    {booking.dates?.end
+                                      ? new Date(booking.dates.end).toLocaleDateString("de-DE")
+                                      : "Invalid Date"}
                                   </span>
                                 </div>
                               </div>
                               <div className="flex items-center mt-2">
                                 <FiCreditCard className="w-4 h-4 mr-2 text-gray-500" />
                                 <span className="font-semibold text-emerald-600">
-                                  €{booking.totalPrice}
+                                  €{booking.pricing?.totalAmount?.toFixed(2) || "0.00"}
                                 </span>
                               </div>
                             </div>

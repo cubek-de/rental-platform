@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zahlungsbestätigung</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #2563eb;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            background-color: #f9fafb;
+            padding: 30px;
+            border-radius: 0 0 5px 5px;
+        }
+        .booking-details {
+            background-color: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+            border: 1px solid #e5e7eb;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+        .amount {
+            font-size: 24px;
+            font-weight: bold;
+            color: #16a34a;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 30px;
+            background-color: #2563eb;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #6b7280;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>✓ Zahlung erfolgreich</h1>
+    </div>
+    
+    <div class="content">
+        <p>Hallo {{userName}},</p>
+        
+        <p>Vielen Dank! Ihre Zahlung wurde erfolgreich verarbeitet.</p>
+        
+        <div class="booking-details">
+            <h2>Zahlungsdetails</h2>
+            
+            <div class="detail-row">
+                <span>Buchungsnummer:</span>
+                <strong>{{bookingNumber}}</strong>
+            </div>
+            
+            <div class="detail-row">
+                <span>Fahrzeug:</span>
+                <strong>{{vehicleName}}</strong>
+            </div>
+            
+            <div class="detail-row">
+                <span>Mietzeit raum:</span>
+                <strong>{{startDate}} - {{endDate}}</strong>
+            </div>
+            
+            <div class="detail-row">
+                <span>Gesamtbetrag:</span>
+                <strong>€{{totalAmount}}</strong>
+            </div>
+            
+            <div class="detail-row">
+                <span>Bezahlter Betrag:</span>
+                <span class="amount">€{{paidAmount}}</span>
+            </div>
+            
+            {{#if isSplitPayment}}
+            <div class="detail-row">
+                <span>Verbleibender Betrag (bei Abholung):</span>
+                <strong>€{{remainingAmount}}</strong>
+            </div>
+            {{/if}}
+            
+            <div class="detail-row">
+                <span>Zahlungsmethode:</span>
+                <strong>{{paymentMethod}}</strong>
+            </div>
+        </div>
+        
+        {{#if isSplitPayment}}
+        <div style="background-color: #fef3c7; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <strong>⚠️ Wichtiger Hinweis:</strong><br>
+            Sie haben eine Teilzahlung (50%) geleistet. Der verbleibende Betrag von €{{remainingAmount}} 
+            ist bei der Fahrzeugabholung in bar zu entrichten.
+        </div>
+        {{/if}}
+        
+        <p>
+            <strong>Was kommt als Nächstes?</strong><br>
+            1. Ihre Buchung wurde bestätigt<br>
+            2. Sie erhalten in Kürze weitere Informationen zur Fahrzeugübergabe<br>
+            3. Bitte bringen Sie Ihren Führerschein und einen Ausweis zur Abholung mit
+        </p>
+        
+        <center>
+            <a href="{{invoiceUrl}}" class="button">Rechnung herunterladen</a>
+        </center>
+        
+        <p>Bei Fragen stehen wir Ihnen gerne zur Verfügung.</p>
+        
+        <p>
+            Mit freundlichen Grüßen,<br>
+            <strong>Ihr WohnmobilTraum Team</strong>
+        </p>
+    </div>
+    
+    <div class="footer">
+        <p>Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht darauf.</p>
+        <p>&copy; 2025 WohnmobilTraum. Alle Rechte vorbehalten.</p>
+    </div>
+</body>
+</html>

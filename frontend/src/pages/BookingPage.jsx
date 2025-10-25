@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useState, useEffect, useCallback, useContext } from "react";
+import { useSearchParams, useNavigate, useParams } from "react-router-dom";
 import {
   Card,
   Button,
@@ -16,16 +16,39 @@ import {
   HiCheck,
 } from "react-icons/hi";
 import axios from "axios";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements } from "@stripe/react-stripe-js";
+import StripePaymentForm from "../components/booking/StripePaymentForm";
+import { AuthContext } from "../context/AuthContext";
+
+// Don't initialize Stripe until needed (prevents adblocker errors)
+let stripePromise = null;
+const getStripe = () => {
+  if (!stripePromise && import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY) {
+    stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+  }
+  return stripePromise;
+};
 
 const BookingPage = () => {
   const [searchParams] = useSearchParams();
+  const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
   const [currentStep, setCurrentStep] = useState(1);
   const [vehicle, setVehicle] = useState(null);
+
+  // Get vehicle identifier - could be slug from query or id from route
+  const vehicleSlug = searchParams.get("vehicleSlug") || id || "";
+
+  // Get dates from URL params
+  const urlStartDate = searchParams.get("startDate") || "";
+  const urlEndDate = searchParams.get("endDate") || "";
+
   const [booking, setBooking] = useState({
-    vehicleId: searchParams.get("vehicleId") || "",
-    startDate: searchParams.get("startDate") || "",
-    endDate: searchParams.get("endDate") || "",
+    vehicleId: "", // Will be set after fetching vehicle
+    startDate: urlStartDate,
+    endDate: urlEndDate,
     guestInfo: {
       adults: 1,
       children: 0,
@@ -37,6 +60,8 @@ const BookingPage = () => {
       licenseNumber: "",
       licenseCountry: "Deutschland",
       licenseExpiry: "",
+      dateOfBirth: "",
+      licenseCategory: "B",
     },
     contactInfo: {
       email: "",
@@ -48,7 +73,10 @@ const BookingPage = () => {
         country: "Deutschland",
       },
     },
+    insurance: "standard", // Default to standard insurance
+    extras: [],
     paymentMethod: "stripe",
+    paymentOption: "full", // "full" or "split"
     acceptedTerms: false,
   });
   const [loading, setLoading] = useState(true);
@@ -62,41 +90,17 @@ const BookingPage = () => {
     total: 0,
   });
 
-  useEffect(() => {
-    document.title = "Buchung | WohnmobilTraum";
-
-    const fetchVehicleDetails = async () => {
-      if (!booking.vehicleId) {
-        setError("Keine Fahrzeug-ID angegeben");
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const response = await axios.get(`/api/vehicles/${booking.vehicleId}`);
-        if (response.data.success) {
-          setVehicle(response.data.data);
-          calculatePriceSummary(response.data.data);
-        }
-      } catch (err) {
-        console.error("Error fetching vehicle details:", err);
-        setError("Das Fahrzeug konnte nicht geladen werden.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchVehicleDetails();
-  }, [
-    booking.vehicleId,
-    booking.startDate,
-    booking.endDate,
-    calculatePriceSummary,
-  ]);
-
+  // Define calculatePriceSummary BEFORE using it in useEffect
   const calculatePriceSummary = useCallback(
     (vehicleData) => {
       if (!booking.startDate || !booking.endDate || !vehicleData) {
+        return;
+      }
+
+      // Check if pricing exists and has required fields
+      if (!vehicleData.pricing || !vehicleData.pricing.basePrice || !vehicleData.pricing.basePrice.perDay) {
+        console.error('Vehicle pricing data is missing or incomplete:', vehicleData);
+        setError('Fahrzeugpreisdaten sind nicht verfügbar');
         return;
       }
 
@@ -123,6 +127,86 @@ const BookingPage = () => {
     },
     [booking.startDate, booking.endDate]
   );
+
+  // Update dates from URL params when they change
+  useEffect(() => {
+    if (urlStartDate || urlEndDate) {
+      setBooking(prev => ({
+        ...prev,
+        startDate: urlStartDate,
+        endDate: urlEndDate,
+      }));
+    }
+  }, [urlStartDate, urlEndDate]);
+
+  // Pre-fill user data if authenticated
+  useEffect(() => {
+    if (user) {
+      setBooking(prev => ({
+        ...prev,
+        driverInfo: {
+          ...prev.driverInfo,
+          firstName: user.firstName || "",
+          lastName: user.lastName || "",
+        },
+        contactInfo: {
+          ...prev.contactInfo,
+          email: user.email || "",
+          phone: user.profile?.phone || "",
+          address: {
+            street: user.profile?.address?.street || "",
+            city: user.profile?.address?.city || "",
+            postalCode: user.profile?.address?.postalCode || "",
+            country: user.profile?.address?.country || "Deutschland",
+          },
+        },
+      }));
+    }
+  }, [user]);
+
+  useEffect(() => {
+    document.title = "Buchung | WohnmobilTraum";
+
+    const fetchVehicleDetails = async () => {
+      if (!vehicleSlug) {
+        setError("Keine Fahrzeug-ID angegeben");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_URL}/api/vehicles/${vehicleSlug}`
+        );
+        if (response.data.success) {
+          // API returns {vehicle: {...}, bookedDates: [...]}
+          const { vehicle: vehicleData } = response.data.data;
+          setVehicle(vehicleData);
+          // Set the vehicle ID in booking state
+          setBooking(prev => ({ ...prev, vehicleId: vehicleData._id }));
+          calculatePriceSummary(vehicleData);
+        } else {
+          setError("Fahrzeug nicht gefunden");
+        }
+      } catch (err) {
+        console.error("Error fetching vehicle details:", err);
+        console.error("Full error:", err.response || err);
+        setError(
+          err.response?.data?.message ||
+          "Das Fahrzeug konnte nicht geladen werden. Bitte versuchen Sie es erneut."
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchVehicleDetails();
+  }, [
+    vehicleSlug,
+    booking.startDate,
+    booking.endDate,
+    calculatePriceSummary,
+  ]);
 
   const handleNextStep = () => {
     setCurrentStep((prev) => Math.min(prev + 1, 4));
@@ -155,23 +239,124 @@ const BookingPage = () => {
     }));
   };
 
-  const handleSubmitBooking = async () => {
+  const [createdBooking, setCreatedBooking] = useState(null);
+  const [clientSecret, setClientSecret] = useState(null);
+
+  const handleCreateBooking = async () => {
     try {
       setLoading(true);
-      const response = await axios.post("/api/bookings", booking);
+      setError(null);
+
+      // Prepare booking data with proper formatting
+      const bookingData = {
+        vehicleId: booking.vehicleId,
+        startDate: booking.startDate, // Already in YYYY-MM-DD from date input
+        endDate: booking.endDate,
+        guestInfo: booking.guestInfo,
+        driverInfo: booking.driverInfo,
+        contactInfo: booking.contactInfo,
+        insurance: booking.insurance,
+        extras: booking.extras || [],
+        paymentMethod: booking.paymentMethod,
+        paymentOption: booking.paymentOption,
+      };
+
+      console.log("Creating booking with data:", bookingData);
+
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/bookings`,
+        bookingData,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        }
+      );
+
       if (response.data.success) {
-        navigate(`/booking/confirmation/${response.data.data.bookingNumber}`);
+        const newBooking = response.data.data;
+        setCreatedBooking(newBooking);
+
+        // Create payment intent and get client secret
+        const paymentResponse = await axios.post(
+          `${import.meta.env.VITE_API_URL}/api/payment/create-payment-intent`,
+          {
+            bookingId: newBooking._id,
+            amount: booking.paymentOption === "split" ? priceSummary.total * 0.5 : priceSummary.total,
+            paymentOption: booking.paymentOption,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`,
+            },
+          }
+        );
+
+        if (paymentResponse.data.success) {
+          setClientSecret(paymentResponse.data.data.clientSecret);
+        }
+
+        return newBooking;
       }
     } catch (err) {
       console.error("Error creating booking:", err);
-      setError(
-        err.response?.data?.message ||
-          "Die Buchung konnte nicht erstellt werden."
-      );
+      console.error("Full error:", err.response || err);
+
+      // Show detailed validation errors if available
+      if (err.response?.data?.errors) {
+        const errorMessages = err.response.data.errors.map(e => e.msg).join(", ");
+        setError(`Validierungsfehler: ${errorMessages}`);
+      } else {
+        setError(
+          err.response?.data?.message ||
+            "Die Buchung konnte nicht erstellt werden."
+        );
+      }
+      throw err;
     } finally {
       setLoading(false);
     }
   };
+
+  // Create booking when moving to payment step
+  const handleMoveToPaymentStep = async () => {
+    // Validate required fields
+    if (!booking.driverInfo.firstName || !booking.driverInfo.lastName) {
+      setError("Bitte füllen Sie Vor- und Nachname aus");
+      return;
+    }
+    if (!booking.driverInfo.licenseNumber) {
+      setError("Bitte geben Sie Ihre Führerscheinnummer ein");
+      return;
+    }
+    if (!booking.contactInfo.email || !booking.contactInfo.phone) {
+      setError("Bitte füllen Sie E-Mail und Telefonnummer aus");
+      return;
+    }
+    if (!booking.vehicleId) {
+      setError("Fahrzeug-ID fehlt. Bitte laden Sie die Seite neu.");
+      return;
+    }
+
+    if (!createdBooking) {
+      const newBooking = await handleCreateBooking();
+      if (newBooking) {
+        setCurrentStep(4);
+      }
+    } else {
+      setCurrentStep(4);
+    }
+  };
+
+  // Check if user is authenticated
+  useEffect(() => {
+    if (!user && !loading) {
+      // Construct redirect URL with dates
+      const redirectUrl = `/booking/${vehicleSlug}?startDate=${booking.startDate}&endDate=${booking.endDate}`;
+      const encodedRedirect = encodeURIComponent(redirectUrl);
+      navigate(`/login?redirect=${encodedRedirect}`);
+    }
+  }, [user, loading, navigate, vehicleSlug, booking.startDate, booking.endDate]);
 
   if (loading) {
     return (
@@ -194,9 +379,27 @@ const BookingPage = () => {
     );
   }
 
+  if (!user) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-center">
+          <Spinner size="xl" />
+          <p className="mt-4">Weiterleitung zur Anmeldung...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">Fahrzeug buchen</h1>
+
+      {/* Error Alert */}
+      {error && (
+        <Alert color="failure" className="mb-6" onDismiss={() => setError(null)}>
+          <span className="font-medium">Fehler:</span> {error}
+        </Alert>
+      )}
 
       <div className="mb-8">
         {/* Custom Stepper */}
@@ -349,14 +552,27 @@ const BookingPage = () => {
                 </div>
               </div>
 
-              <div className="flex justify-end">
+              <div className="flex justify-end mt-6">
                 <Button
                   onClick={handleNextStep}
                   disabled={!booking.startDate || !booking.endDate}
+                  className="bg-primary-600 hover:bg-primary-700"
+                  size="lg"
                 >
                   Weiter
                 </Button>
               </div>
+
+              {/* Debug info - remove after testing */}
+              {(!booking.startDate || !booking.endDate) && (
+                <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm">
+                  <p className="font-medium text-yellow-800">Button deaktiviert:</p>
+                  <p className="text-yellow-700">
+                    Startdatum: {booking.startDate || "Nicht gesetzt"}<br />
+                    Enddatum: {booking.endDate || "Nicht gesetzt"}
+                  </p>
+                </div>
+              )}
             </Card>
           )}
 
@@ -517,10 +733,16 @@ const BookingPage = () => {
               </div>
 
               <div className="flex justify-between">
-                <Button color="light" onClick={handlePrevStep}>
+                <Button color="gray" onClick={handlePrevStep}>
                   Zurück
                 </Button>
-                <Button onClick={handleNextStep}>Weiter</Button>
+                <Button
+                  onClick={handleNextStep}
+                  className="bg-primary-600 hover:bg-primary-700 text-white"
+                  size="lg"
+                >
+                  Weiter
+                </Button>
               </div>
             </Card>
           )}
@@ -532,112 +754,57 @@ const BookingPage = () => {
               </h2>
 
               <div className="mb-6">
-                <h3 className="text-lg font-medium mb-3">
-                  Zahlungsmethode wählen
-                </h3>
+                <h3 className="text-lg font-medium mb-3">Zahlungsoption</h3>
                 <div className="space-y-3">
-                  <div className="flex items-center">
-                    <input
-                      type="radio"
-                      id="stripe"
-                      name="paymentMethod"
-                      value="stripe"
-                      checked={booking.paymentMethod === "stripe"}
-                      onChange={() =>
-                        setBooking({ ...booking, paymentMethod: "stripe" })
-                      }
-                      className="mr-2"
-                    />
-                    <label htmlFor="stripe" className="flex items-center">
-                      <span className="mr-2">Kreditkarte</span>
-                      <img
-                        src="/src/assets/visa.svg"
-                        alt="Visa"
-                        className="h-6 mr-1"
+                  <div className="border rounded-lg p-4">
+                    <div className="flex items-center mb-2">
+                      <input
+                        type="radio"
+                        id="fullPayment"
+                        name="paymentOption"
+                        value="full"
+                        checked={booking.paymentOption === "full"}
+                        onChange={() =>
+                          setBooking({ ...booking, paymentOption: "full" })
+                        }
+                        className="mr-3"
                       />
-                      <img
-                        src="/src/assets/mastercard.svg"
-                        alt="Mastercard"
-                        className="h-6"
-                      />
-                    </label>
+                      <label htmlFor="fullPayment" className="flex-1">
+                        <span className="font-medium">Vollzahlung online</span>
+                        <p className="text-sm text-gray-600">
+                          Bezahlen Sie den gesamten Betrag von €
+                          {priceSummary.total.toFixed(2)} jetzt online
+                        </p>
+                      </label>
+                    </div>
                   </div>
 
-                  <div className="flex items-center">
-                    <input
-                      type="radio"
-                      id="paypal"
-                      name="paymentMethod"
-                      value="paypal"
-                      checked={booking.paymentMethod === "paypal"}
-                      onChange={() =>
-                        setBooking({ ...booking, paymentMethod: "paypal" })
-                      }
-                      className="mr-2"
-                    />
-                    <label htmlFor="paypal" className="flex items-center">
-                      <span className="mr-2">PayPal</span>
-                      <img
-                        src="/src/assets/paypal.svg"
-                        alt="PayPal"
-                        className="h-6"
+                  <div className="border rounded-lg p-4">
+                    <div className="flex items-center mb-2">
+                      <input
+                        type="radio"
+                        id="splitPayment"
+                        name="paymentOption"
+                        value="split"
+                        checked={booking.paymentOption === "split"}
+                        onChange={() =>
+                          setBooking({ ...booking, paymentOption: "split" })
+                        }
+                        className="mr-3"
                       />
-                    </label>
-                  </div>
-
-                  <div className="flex items-center">
-                    <input
-                      type="radio"
-                      id="bank_transfer"
-                      name="paymentMethod"
-                      value="bank_transfer"
-                      checked={booking.paymentMethod === "bank_transfer"}
-                      onChange={() =>
-                        setBooking({
-                          ...booking,
-                          paymentMethod: "bank_transfer",
-                        })
-                      }
-                      className="mr-2"
-                    />
-                    <label htmlFor="bank_transfer">Überweisung</label>
+                      <label htmlFor="splitPayment" className="flex-1">
+                        <span className="font-medium">
+                          Teilzahlung (50% online, 50% bar)
+                        </span>
+                        <p className="text-sm text-gray-600">
+                          Bezahlen Sie €{(priceSummary.total * 0.5).toFixed(2)}{" "}
+                          online und den Rest bei Abholung in bar
+                        </p>
+                      </label>
+                    </div>
                   </div>
                 </div>
               </div>
-
-              {booking.paymentMethod === "stripe" && (
-                <div className="bg-gray-50 p-4 rounded-lg mb-6">
-                  <h4 className="font-medium mb-3">Kreditkartendaten</h4>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block mb-1 text-sm font-medium">
-                        Kartennummer
-                      </label>
-                      <TextInput placeholder="1234 5678 9012 3456" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block mb-1 text-sm font-medium">
-                          Ablaufdatum
-                        </label>
-                        <TextInput placeholder="MM / JJ" />
-                      </div>
-                      <div>
-                        <label className="block mb-1 text-sm font-medium">
-                          CVC
-                        </label>
-                        <TextInput placeholder="123" />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block mb-1 text-sm font-medium">
-                        Karteninhaber
-                      </label>
-                      <TextInput placeholder="Max Mustermann" />
-                    </div>
-                  </div>
-                </div>
-              )}
 
               <div className="mb-6">
                 <div className="flex items-center">
@@ -670,14 +837,23 @@ const BookingPage = () => {
               </div>
 
               <div className="flex justify-between">
-                <Button color="light" onClick={handlePrevStep}>
+                <Button color="gray" onClick={handlePrevStep}>
                   Zurück
                 </Button>
                 <Button
-                  onClick={handleNextStep}
-                  disabled={!booking.acceptedTerms}
+                  onClick={handleMoveToPaymentStep}
+                  disabled={!booking.acceptedTerms || loading}
+                  className="bg-primary-600 hover:bg-primary-700 text-white disabled:bg-gray-400"
+                  size="lg"
                 >
-                  Weiter
+                  {loading ? (
+                    <>
+                      <Spinner size="sm" className="mr-2" />
+                      Buchung wird erstellt...
+                    </>
+                  ) : (
+                    "Weiter zur Zahlung"
+                  )}
                 </Button>
               </div>
             </Card>
@@ -686,7 +862,7 @@ const BookingPage = () => {
           {currentStep === 4 && (
             <Card>
               <h2 className="text-xl font-semibold mb-4">
-                Buchungsbestätigung
+                Zahlung & Buchungsabschluss
               </h2>
 
               <div className="space-y-6">
@@ -707,56 +883,17 @@ const BookingPage = () => {
                         {new Date(booking.endDate).toLocaleDateString("de-DE")}
                       </span>
                     </div>
-                    <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-center mb-2">
                       <span>Anzahl Tage:</span>
                       <span className="font-medium">{priceSummary.days}</span>
                     </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-medium mb-3">
-                    Persönliche Daten
-                  </h3>
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-y-2">
-                      <div>
-                        <span className="text-gray-600">Name:</span>
-                        <span className="font-medium ml-2">
-                          {booking.driverInfo.firstName}{" "}
-                          {booking.driverInfo.lastName}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-gray-600">E-Mail:</span>
-                        <span className="font-medium ml-2">
-                          {booking.contactInfo.email}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-gray-600">Telefon:</span>
-                        <span className="font-medium ml-2">
-                          {booking.contactInfo.phone}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-gray-600">Führerschein:</span>
-                        <span className="font-medium ml-2">
-                          {booking.driverInfo.licenseNumber}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-medium mb-3">Zahlungsart</h3>
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <div className="font-medium">
-                      {booking.paymentMethod === "stripe" && "Kreditkarte"}
-                      {booking.paymentMethod === "paypal" && "PayPal"}
-                      {booking.paymentMethod === "bank_transfer" &&
-                        "Überweisung"}
+                    <div className="flex justify-between items-center pt-2 border-t">
+                      <span>Zahlungsoption:</span>
+                      <span className="font-medium">
+                        {booking.paymentOption === "full"
+                          ? "Vollzahlung"
+                          : "Teilzahlung (50/50)"}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -764,29 +901,53 @@ const BookingPage = () => {
                 <Alert color="info">
                   <HiInformationCircle className="mr-2 h-5 w-5" />
                   <span>
-                    Die Kaution in Höhe von €{vehicle?.pricing.deposit} wird bei
+                    Die Kaution in Höhe von €{vehicle?.pricing?.deposit || 0} wird bei
                     Abholung des Fahrzeugs fällig.
                   </span>
                 </Alert>
 
-                <Button
-                  onClick={handleSubmitBooking}
-                  color="success"
-                  className="w-full"
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <Spinner size="sm" light={true} />
-                      <span className="ml-2">Wird verarbeitet...</span>
-                    </>
-                  ) : (
-                    <>
-                      <HiDocumentText className="mr-2 h-5 w-5" />
-                      Buchung abschließen
-                    </>
-                  )}
-                </Button>
+                {createdBooking && clientSecret ? (
+                  <div className="border-t pt-6">
+                    <h3 className="text-lg font-medium mb-4">Zahlungsinformationen</h3>
+                    <Elements
+                      stripe={getStripe()}
+                      options={{
+                        clientSecret: clientSecret,
+                        appearance: {
+                          theme: 'stripe',
+                        },
+                      }}
+                    >
+                      <StripePaymentForm
+                        bookingId={createdBooking._id}
+                        amount={
+                          booking.paymentOption === "split"
+                            ? priceSummary.total * 0.5
+                            : priceSummary.total
+                        }
+                        paymentOption={booking.paymentOption}
+                        onSuccess={(data) => {
+                          // Navigate to confirmation page
+                          navigate(`/booking/confirmation/${data.booking.bookingNumber}`);
+                        }}
+                        onError={(error) => {
+                          setError(error.message || "Zahlung fehlgeschlagen");
+                        }}
+                      />
+                    </Elements>
+                  </div>
+                ) : (
+                  <div className="flex justify-center py-8">
+                    <Spinner size="xl" />
+                    <span className="ml-3">Buchung wird vorbereitet...</span>
+                  </div>
+                )}
+
+                <div className="flex justify-between">
+                  <Button color="light" onClick={handlePrevStep}>
+                    Zurück
+                  </Button>
+                </div>
               </div>
             </Card>
           )}
@@ -800,37 +961,37 @@ const BookingPage = () => {
             <div className="space-y-3 mb-4">
               <div className="flex justify-between">
                 <span>
-                  €{vehicle?.pricing.basePrice.perDay} × {priceSummary.days}{" "}
+                  €{vehicle?.pricing?.basePrice?.perDay || 0} × {priceSummary.days}{" "}
                   Tage
                 </span>
-                <span>€{priceSummary.basePrice}</span>
+                <span>€{priceSummary.basePrice.toFixed(2)}</span>
               </div>
 
               {priceSummary.cleaningFee > 0 && (
                 <div className="flex justify-between">
                   <span>Reinigungsgebühr</span>
-                  <span>€{priceSummary.cleaningFee}</span>
+                  <span>€{priceSummary.cleaningFee.toFixed(2)}</span>
                 </div>
               )}
 
               {priceSummary.serviceFee > 0 && (
                 <div className="flex justify-between">
                   <span>Servicegebühr</span>
-                  <span>€{priceSummary.serviceFee}</span>
+                  <span>€{priceSummary.serviceFee.toFixed(2)}</span>
                 </div>
               )}
 
               <div className="border-t pt-2 font-bold">
                 <div className="flex justify-between">
                   <span>Gesamtpreis</span>
-                  <span>€{priceSummary.total}</span>
+                  <span>€{priceSummary.total.toFixed(2)}</span>
                 </div>
               </div>
             </div>
 
             <div className="text-sm text-gray-600 mb-4">
               <p className="mb-2">
-                <strong>Kaution:</strong> €{vehicle?.pricing.deposit}
+                <strong>Kaution:</strong> €{vehicle?.pricing?.deposit || 0}
                 <span className="block mt-1">
                   Die Kaution wird bei Abholung des Fahrzeugs hinterlegt und
                   nach Rückgabe erstattet, sofern das Fahrzeug unbeschädigt ist.

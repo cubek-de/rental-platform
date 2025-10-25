@@ -23,6 +23,7 @@ const EmailVerificationPage = lazy(() =>
 const VehicleListPage = lazy(() => import("./pages/VehicleListPage"));
 const VehicleDetailPage = lazy(() => import("./pages/VehicleDetailPage"));
 const BookingPage = lazy(() => import("./pages/BookingPage"));
+const BookingConfirmationPage = lazy(() => import("./pages/BookingConfirmationPage"));
 const UserDashboard = lazy(() => import("./pages/UserDashboard"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 
@@ -43,6 +44,7 @@ const AgentProfilePage = lazy(() => import("./pages/agent/AgentProfilePage"));
 
 // Context
 import { AuthProvider } from "./context/AuthContext";
+import { SocketProvider } from "./context/SocketContext";
 
 const AppLayout = () => {
   const location = useLocation();
@@ -88,6 +90,8 @@ const AppLayout = () => {
             <Route path="/vehicles" element={<VehicleListPage />} />
             <Route path="/vehicles/:slug" element={<VehicleDetailPage />} />
             <Route path="/booking/:id" element={<BookingPage />} />
+            <Route path="/booking/new" element={<BookingPage />} />
+            <Route path="/booking/confirmation/:bookingId" element={<BookingConfirmationPage />} />
             <Route path="/dashboard/*" element={<UserDashboard />} />
 
             {/* Admin Routes */}
@@ -110,9 +114,11 @@ const AppLayout = () => {
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <AppLayout />
-      </Router>
+      <SocketProvider>
+        <Router>
+          <AppLayout />
+        </Router>
+      </SocketProvider>
     </AuthProvider>
   );
 }

@@ -4,13 +4,22 @@ const Vehicle = require("../models/Vehicle.model");
 const User = require("../models/User.model");
 const { validationResult } = require("express-validator");
 const sendEmail = require("../utils/sendEmail");
-const generatePDF = require("../utils/generatePDF");
+const {
+  calculateInsurancePrice,
+  getInsurancePackage,
+  calculateRefundAmount,
+} = require("../constants/insurance");
 
 // Create booking
 const createBooking = async (req, res) => {
   try {
+    console.log("=== CREATE BOOKING REQUEST ===");
+    console.log("User:", req.user?._id);
+    console.log("Body:", JSON.stringify(req.body, null, 2));
+
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.log("Validation errors:", errors.array());
       return res.status(400).json({
         success: false,
         errors: errors.array(),
@@ -23,10 +32,13 @@ const createBooking = async (req, res) => {
       endDate,
       guestInfo,
       driverInfo,
+      contactInfo,
       extras,
       insurance,
       paymentMethod,
     } = req.body;
+
+    console.log("Extracted fields:", { vehicleId, startDate, endDate, insurance, paymentMethod });
 
     // Check vehicle availability
     const vehicle = await Vehicle.findById(vehicleId);
@@ -69,8 +81,11 @@ const createBooking = async (req, res) => {
 
     // Calculate extras total
     let extrasTotal = 0;
-    const processedExtras = extras
+    const processedExtras = (extras || [])
       .map((extra) => {
+        if (!vehicle.pricing.extras || vehicle.pricing.extras.length === 0) {
+          return null;
+        }
         const vehicleExtra = vehicle.pricing.extras.find(
           (e) => e.name === extra.name
         );
@@ -79,13 +94,14 @@ const createBooking = async (req, res) => {
         let total = 0;
         switch (vehicleExtra.priceType) {
           case "pro_Tag":
-            total = vehicleExtra.price * extra.quantity * numberOfDays;
+            total = vehicleExtra.price * (extra.quantity || 1) * numberOfDays;
             break;
           case "pro_Miete":
-            total = vehicleExtra.price * extra.quantity;
+            total = vehicleExtra.price * (extra.quantity || 1);
             break;
           case "pro_Person":
-            total = vehicleExtra.price * extra.quantity * guestInfo.totalGuests;
+            const totalGuests = (guestInfo.adults || 0) + (guestInfo.children || 0);
+            total = vehicleExtra.price * (extra.quantity || 1) * totalGuests;
             break;
         }
         extrasTotal += total;
@@ -99,8 +115,9 @@ const createBooking = async (req, res) => {
       })
       .filter(Boolean);
 
-    // Calculate insurance
-    const insurancePrice = vehicle.pricing.insurance[insurance] * numberOfDays;
+    // Calculate insurance using constants
+    const insurancePackage = getInsurancePackage(insurance);
+    const insurancePrice = calculateInsurancePrice(insurance, numberOfDays);
 
     // Calculate fees
     const serviceFee = (basePrice - discount + extrasTotal) * 0.05; // 5% service fee
@@ -131,6 +148,11 @@ const createBooking = async (req, res) => {
       },
       guestInfo,
       driverInfo,
+      contactInfo: contactInfo || {
+        email: req.user.email,
+        phone: req.user.profile?.phone || "",
+        address: req.user.profile?.address || {},
+      },
       pricing: {
         vehiclePrice: vehicle.pricing.basePrice.perDay,
         numberOfDays,
@@ -143,7 +165,7 @@ const createBooking = async (req, res) => {
         insurance: {
           type: insurance,
           price: insurancePrice,
-          deductible: vehicle.pricing.insurance.deductible,
+          deductible: insurancePackage.deductible,
         },
         fees: {
           serviceFee,
@@ -173,8 +195,24 @@ const createBooking = async (req, res) => {
       },
     });
 
-    // Send confirmation email
-    await sendBookingConfirmationEmail(booking, req.user, vehicle);
+    // Send confirmation email (async, don't wait)
+    try {
+      await sendEmail({
+        to: contactInfo?.email || req.user.email,
+        subject: "Buchungsbestätigung - WohnmobilTraum",
+        html: `
+          <h1>Buchungsbestätigung</h1>
+          <p>Vielen Dank für Ihre Buchung!</p>
+          <p><strong>Buchungsnummer:</strong> ${booking.bookingNumber}</p>
+          <p><strong>Fahrzeug:</strong> ${vehicle.name}</p>
+          <p><strong>Zeitraum:</strong> ${new Date(startDate).toLocaleDateString('de-DE')} - ${new Date(endDate).toLocaleDateString('de-DE')}</p>
+          <p><strong>Gesamtbetrag:</strong> €${totalAmount.toFixed(2)}</p>
+        `,
+      });
+    } catch (emailError) {
+      console.error("Email error:", emailError);
+      // Don't fail booking if email fails
+    }
 
     res.status(201).json({
       success: true,
@@ -183,9 +221,11 @@ const createBooking = async (req, res) => {
     });
   } catch (error) {
     console.error("Create booking error:", error);
+    console.error("Error stack:", error.stack);
     res.status(500).json({
       success: false,
       message: "Fehler beim Erstellen der Buchung",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
 };
@@ -460,18 +500,109 @@ const processCheckOut = async (req, res) => {
   }
 };
 
-// Helper functions
-const calculateRefundAmount = (booking) => {
-  const now = new Date();
-  const startDate = new Date(booking.dates.start);
-  const daysUntilStart = Math.ceil((startDate - now) / (1000 * 60 * 60 * 24));
+// Cancel booking with refund
+const cancelBooking = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
 
-  let refundPercentage = 0;
-  if (daysUntilStart > 30) refundPercentage = 100;
-  else if (daysUntilStart > 14) refundPercentage = 50;
-  else if (daysUntilStart > 7) refundPercentage = 25;
+    const booking = await Booking.findById(id).populate("vehicle").populate("user");
 
-  return (booking.pricing.totalAmount * refundPercentage) / 100;
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Buchung nicht gefunden",
+      });
+    }
+
+    // Check authorization - user, agent, or admin can cancel
+    const isOwner = booking.user._id.toString() === req.user._id.toString();
+    const isAgent =
+      req.user.role === "agent" &&
+      booking.vehicle.owner.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === "admin";
+
+    if (!isOwner && !isAgent && !isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: "Keine Berechtigung",
+      });
+    }
+
+    if (booking.status === "cancelled") {
+      return res.status(400).json({
+        success: false,
+        message: "Buchung ist bereits storniert",
+      });
+    }
+
+    if (booking.status === "completed") {
+      return res.status(400).json({
+        success: false,
+        message: "Abgeschlossene Buchungen können nicht storniert werden",
+      });
+    }
+
+    // Calculate refund based on new policy
+    const now = new Date();
+    const startDate = new Date(booking.dates.start);
+    const daysUntilStart = Math.ceil((startDate - now) / (1000 * 60 * 60 * 24));
+
+    const refundInfo = calculateRefundAmount(booking.pricing.totalAmount, daysUntilStart);
+
+    // Update booking
+    booking.status = "cancelled";
+    booking.cancellation = {
+      isCancelled: true,
+      cancelledAt: new Date(),
+      cancelledBy: req.user._id,
+      reason: reason || "Vom Kunden storniert",
+      policy: refundInfo.policy.description,
+      refundAmount: refundInfo.refundAmount,
+      refundStatus: refundInfo.refundAmount > 0 ? "pending" : "not_applicable",
+    };
+
+    await booking.save();
+
+    // Send cancellation email
+    await sendCancellationEmail(booking, refundInfo);
+
+    // Send notification to admin and agent
+    const io = req.app.get("io");
+    if (io) {
+      io.to("admins").emit("notification", {
+        type: "booking_cancelled",
+        title: "Buchung storniert",
+        message: `Buchung ${booking.bookingNumber} wurde storniert`,
+        bookingId: booking._id,
+      });
+
+      if (booking.vehicle.owner) {
+        io.to(`user:${booking.vehicle.owner}`).emit("notification", {
+          type: "booking_cancelled",
+          title: "Buchung storniert",
+          message: `Buchung ${booking.bookingNumber} für ${booking.vehicle.name} wurde storniert`,
+          bookingId: booking._id,
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: "Buchung erfolgreich storniert",
+      data: {
+        booking,
+        refund: refundInfo,
+      },
+    });
+  } catch (error) {
+    console.error("Cancel booking error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Fehler beim Stornieren der Buchung",
+      error: error.message,
+    });
+  }
 };
 
 const sendBookingConfirmationEmail = async (booking, user, vehicle) => {
@@ -510,6 +641,26 @@ const sendStatusUpdateEmail = async (booking) => {
   });
 };
 
+const sendCancellationEmail = async (booking, refundInfo) => {
+  await sendEmail({
+    to: booking.user.email,
+    subject: "Buchung storniert - WohnmobilTraum",
+    template: "bookingCancellation",
+    data: {
+      userName: booking.user.firstName,
+      bookingNumber: booking.bookingNumber,
+      vehicleName: booking.vehicle.name,
+      startDate: new Date(booking.dates.start).toLocaleDateString("de-DE"),
+      endDate: new Date(booking.dates.end).toLocaleDateString("de-DE"),
+      totalAmount: booking.pricing.totalAmount,
+      refundAmount: refundInfo.refundAmount,
+      refundPercentage: refundInfo.refundPercentage,
+      refundPolicy: refundInfo.policy.description,
+      cancellationReason: booking.cancellation.reason,
+    },
+  });
+};
+
 module.exports = {
   createBooking,
   getUserBookings,
@@ -517,4 +668,5 @@ module.exports = {
   updateBookingStatus,
   processCheckIn,
   processCheckOut,
+  cancelBooking,
 };

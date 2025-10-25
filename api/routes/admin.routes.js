@@ -26,12 +26,16 @@ router.post(
 
 // Vehicle management
 router.get("/vehicles", adminController.getVehicles);
+router.get("/vehicles/pending", adminController.getPendingVehicles);
 router.post("/vehicles", adminController.createVehicle);
 router.put("/vehicles/:id", adminController.updateVehicle);
 router.delete("/vehicles/:id", adminController.deleteVehicle);
 
 // Bookings management
 router.get("/bookings", adminController.getAllBookings);
+router.get("/bookings/pending", adminController.getPendingBookings);
+router.patch("/bookings/:bookingId/approve", adminController.approveBooking);
+router.patch("/bookings/:bookingId/reject", adminController.rejectBooking);
 
 // Vehicle verification
 router.patch("/vehicles/:id/verify", adminController.verifyVehicle);

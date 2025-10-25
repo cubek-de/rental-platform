@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Button, Card, Pagination, Badge, Spinner } from "flowbite-react";
+import { Button, Card, Pagination, Badge, Spinner, Table, Alert } from "flowbite-react";
 import api from "../../services/api";
 import { FiEye, FiDownload, FiX } from "react-icons/fi";
 import { Link } from "react-router-dom";
@@ -16,10 +16,15 @@ const UserBookings = () => {
       setLoading(true);
       setError("");
       const response = await api.get(
-        `/bookings/user?page=${currentPage}&limit=5`
+        `/api/bookings/my-bookings?page=${currentPage}&limit=5`
       );
-      setBookings(response.data.bookings);
-      setTotalPages(Math.ceil(response.data.total / 5));
+      console.log("Full bookings response:", response);
+      console.log("Bookings data:", response.data);
+      console.log("Bookings array:", response.data.data?.bookings);
+
+      const bookingsData = response.data.data?.bookings || [];
+      setBookings(bookingsData);
+      setTotalPages(response.data.data?.pagination?.pages || 1);
     } catch (error) {
       console.error("Fehler beim Laden der Buchungen:", error);
       setError(
@@ -62,7 +67,7 @@ const UserBookings = () => {
   const getStatusBadge = (status) => {
     switch (status) {
       case "pending":
-        return <Badge color="warning">Ausstehend</Badge>;
+        return <Badge color="warning">Wartend</Badge>;
       case "confirmed":
         return <Badge color="success">Bestätigt</Badge>;
       case "active":
@@ -148,54 +153,66 @@ const UserBookings = () => {
           </Table.Head>
 
           <Table.Body>
-            {bookings.map((booking) => (
-              <Table.Row key={booking._id} className="bg-white">
-                <Table.Cell className="font-medium text-gray-900">
-                  #{booking._id.substring(0, 8)}
-                </Table.Cell>
-                <Table.Cell>
-                  {booking.vehicle?.name || "Unbekanntes Fahrzeug"}
-                </Table.Cell>
-                <Table.Cell>
-                  {new Date(booking.startDate).toLocaleDateString("de-DE")} -{" "}
-                  {new Date(booking.endDate).toLocaleDateString("de-DE")}
-                </Table.Cell>
-                <Table.Cell>{booking.totalPrice?.toFixed(2)} €</Table.Cell>
-                <Table.Cell>{getStatusBadge(booking.status)}</Table.Cell>
-                <Table.Cell>
-                  <div className="flex space-x-2">
-                    <Button
-                      size="xs"
-                      color="info"
-                      as={Link}
-                      to={`/bookings/${booking._id}`}
-                    >
-                      <FiEye className="mr-1" /> Details
-                    </Button>
+            {bookings.map((booking) => {
+              console.log("Booking item:", booking);
+              const startDate = booking.dates?.start ? new Date(booking.dates.start) : null;
+              const endDate = booking.dates?.end ? new Date(booking.dates.end) : null;
 
-                    {["confirmed", "completed"].includes(booking.status) && (
+              return (
+                <Table.Row key={booking._id} className="bg-white">
+                  <Table.Cell className="font-medium text-gray-900">
+                    #{booking.bookingNumber || booking._id?.substring(0, 8) || "N/A"}
+                  </Table.Cell>
+                  <Table.Cell>
+                    {booking.vehicle?.name || "Unbekanntes Fahrzeug"}
+                  </Table.Cell>
+                  <Table.Cell>
+                    {startDate && !isNaN(startDate)
+                      ? startDate.toLocaleDateString("de-DE")
+                      : "Datum fehlt"} -{" "}
+                    {endDate && !isNaN(endDate)
+                      ? endDate.toLocaleDateString("de-DE")
+                      : "Datum fehlt"}
+                  </Table.Cell>
+                  <Table.Cell>
+                    €{booking.pricing?.totalAmount?.toFixed(2) || "0.00"}
+                  </Table.Cell>
+                  <Table.Cell>{getStatusBadge(booking.status)}</Table.Cell>
+                  <Table.Cell>
+                    <div className="flex space-x-2">
                       <Button
                         size="xs"
-                        color="light"
-                        onClick={() => downloadInvoice(booking._id)}
+                        color="info"
+                        as={Link}
+                        to={`/bookings/${booking._id}`}
                       >
-                        <FiDownload className="mr-1" /> Rechnung
+                        <FiEye className="mr-1" /> Details
                       </Button>
-                    )}
 
-                    {["pending", "confirmed"].includes(booking.status) && (
-                      <Button
-                        size="xs"
-                        color="failure"
-                        onClick={() => cancelBooking(booking._id)}
-                      >
-                        <FiX className="mr-1" /> Stornieren
-                      </Button>
-                    )}
-                  </div>
-                </Table.Cell>
-              </Table.Row>
-            ))}
+                      {["confirmed", "completed"].includes(booking.status) && (
+                        <Button
+                          size="xs"
+                          color="light"
+                          onClick={() => downloadInvoice(booking._id)}
+                        >
+                          <FiDownload className="mr-1" /> Rechnung
+                        </Button>
+                      )}
+
+                      {["pending", "confirmed"].includes(booking.status) && (
+                        <Button
+                          size="xs"
+                          color="failure"
+                          onClick={() => cancelBooking(booking._id)}
+                        >
+                          <FiX className="mr-1" /> Stornieren
+                        </Button>
+                      )}
+                    </div>
+                  </Table.Cell>
+                </Table.Row>
+              );
+            })}
           </Table.Body>
         </Table>
       </div>

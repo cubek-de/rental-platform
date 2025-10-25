@@ -3,6 +3,7 @@ const User = require("../models/User.model");
 const Vehicle = require("../models/Vehicle.model");
 const Booking = require("../models/Booking.model");
 const Review = require("../models/Review.model");
+const { createNotification } = require("./notification.controller");
 
 // Dashboard statistics
 const getDashboardStats = async (req, res) => {
@@ -23,9 +24,11 @@ const getDashboardStats = async (req, res) => {
     const [
       totalUsers,
       totalVehicles,
+      pendingVehicles,
       totalBookings,
       activeBookings,
       todayBookings,
+      pendingBookings,
       monthlyRevenue,
       lastMonthRevenue,
       pendingReviews,
@@ -34,9 +37,11 @@ const getDashboardStats = async (req, res) => {
     ] = await Promise.all([
       User.countDocuments({ role: "user" }),
       Vehicle.countDocuments({ status: "aktiv" }),
+      Vehicle.countDocuments({ verificationStatus: "ausstehend" }),
       Booking.countDocuments(),
       Booking.countDocuments({ status: "active" }),
       Booking.countDocuments({ createdAt: { $gte: today } }),
+      Booking.countDocuments({ status: "pending" }),
 
       Booking.aggregate([
         {
@@ -97,9 +102,11 @@ const getDashboardStats = async (req, res) => {
         overview: {
           totalUsers,
           totalVehicles,
+          pendingVehicles,
           totalBookings,
           activeBookings,
           todayBookings,
+          pendingBookings,
           pendingReviews,
         },
         revenue: {
@@ -320,8 +327,15 @@ const createUser = async (req, res) => {
 // Get all vehicles (admin only)
 const getVehicles = async (req, res) => {
   try {
-    const vehicles = await Vehicle.find()
-      .populate("owner", "firstName lastName email")
+    const { verificationStatus } = req.query;
+    const query = {};
+
+    if (verificationStatus) {
+      query.verificationStatus = verificationStatus;
+    }
+
+    const vehicles = await Vehicle.find(query)
+      .populate("owner", "firstName lastName email agentProfile.companyName")
       .sort({ createdAt: -1 });
 
     res.status(200).json({
@@ -336,6 +350,31 @@ const getVehicles = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Fehler beim Abrufen der Fahrzeuge",
+    });
+  }
+};
+
+// Get pending vehicles for admin approval
+const getPendingVehicles = async (req, res) => {
+  try {
+    const pendingVehicles = await Vehicle.find({
+      verificationStatus: "ausstehend",
+    })
+      .populate("owner", "firstName lastName email agentProfile.companyName")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        vehicles: pendingVehicles,
+        count: pendingVehicles.length,
+      },
+    });
+  } catch (error) {
+    console.error("Get pending vehicles error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Fehler beim Abrufen der ausstehenden Fahrzeuge",
     });
   }
 };
@@ -672,19 +711,17 @@ const verifyVehicle = async (req, res) => {
     const { id } = req.params;
     const { status, notes } = req.body;
 
-    const vehicle = await Vehicle.findByIdAndUpdate(
-      id,
-      {
-        verificationStatus: status,
-        $push: {
-          "metadata.verificationNotes": {
-            note: notes,
-            addedBy: req.user._id,
-            addedAt: new Date(),
-          },
-        },
-      },
-      { new: true }
+    // Validate status
+    if (!["genehmigt", "abgelehnt"].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Ungültiger Status. Verwenden Sie 'genehmigt' oder 'abgelehnt'",
+      });
+    }
+
+    const vehicle = await Vehicle.findById(id).populate(
+      "owner",
+      "firstName lastName email"
     );
 
     if (!vehicle) {
@@ -694,12 +731,86 @@ const verifyVehicle = async (req, res) => {
       });
     }
 
-    // Send notification to vehicle owner
-    await sendVehicleVerificationEmail(vehicle, status);
+    const io = req.app.get("io");
+
+    // Handle rejection - delete vehicle
+    if (status === "abgelehnt") {
+      // Send rejection notification to agent
+      await createNotification(
+        {
+          recipient: vehicle.owner._id,
+          sender: req.user._id,
+          type: "vehicle_rejected",
+          title: "Fahrzeug abgelehnt",
+          message: `Ihr Fahrzeug "${vehicle.name}" wurde abgelehnt. ${
+            notes ? `Grund: ${notes}` : ""
+          }`,
+          relatedVehicle: vehicle._id,
+          metadata: {
+            vehicleName: vehicle.name,
+            rejectionReason: notes || "Keine Angabe",
+            rejectedBy: `${req.user.firstName} ${req.user.lastName}`,
+          },
+        },
+        io
+      );
+
+      // Delete vehicle from database
+      await Vehicle.findByIdAndDelete(id);
+
+      // Remove vehicle from agent's profile
+      await User.findByIdAndUpdate(vehicle.owner._id, {
+        $pull: { "agentProfile.vehicles": vehicle._id },
+      });
+
+      return res.json({
+        success: true,
+        message: "Fahrzeug abgelehnt und gelöscht",
+      });
+    }
+
+    // Handle approval
+    vehicle.verificationStatus = status;
+    if (notes) {
+      if (!vehicle.metadata) {
+        vehicle.metadata = {};
+      }
+      if (!vehicle.metadata.verificationNotes) {
+        vehicle.metadata.verificationNotes = [];
+      }
+      vehicle.metadata.verificationNotes.push({
+        note: notes,
+        addedBy: req.user._id,
+        addedAt: new Date(),
+      });
+    }
+    await vehicle.save();
+
+    // Send approval notification to agent
+    await createNotification(
+      {
+        recipient: vehicle.owner._id,
+        sender: req.user._id,
+        type: "vehicle_approved",
+        title: "Fahrzeug genehmigt",
+        message: `Ihr Fahrzeug "${vehicle.name}" wurde genehmigt und ist jetzt für Buchungen verfügbar.`,
+        relatedVehicle: vehicle._id,
+        actionUrl: `/agent/vehicles/${vehicle._id}`,
+        metadata: {
+          vehicleName: vehicle.name,
+          approvedBy: `${req.user.firstName} ${req.user.lastName}`,
+        },
+      },
+      io
+    );
+
+    // Send notification email
+    // TODO: Implement sendVehicleVerificationEmail function
+    // await sendVehicleVerificationEmail(vehicle, status);
 
     res.json({
       success: true,
-      message: "Fahrzeug-Verifizierungsstatus aktualisiert",
+      message: "Fahrzeug genehmigt",
       data: vehicle,
     });
   } catch (error) {
@@ -933,6 +1044,250 @@ const getSystemSettings = async (req, res) => {
   }
 };
 
+// Get pending bookings
+const getPendingBookings = async (req, res) => {
+  try {
+    const pendingBookings = await Booking.find({ status: "pending" })
+      .populate("user", "firstName lastName email profile.phone")
+      .populate("vehicle", "name category images pricing.basePrice")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.json({
+      success: true,
+      data: pendingBookings,
+    });
+  } catch (error) {
+    console.error("Get pending bookings error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Fehler beim Abrufen der ausstehenden Buchungen",
+    });
+  }
+};
+
+// Approve booking
+const approveBooking = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const { notes } = req.body;
+
+    const booking = await Booking.findById(bookingId)
+      .populate("user", "firstName lastName email")
+      .populate("vehicle", "name");
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Buchung nicht gefunden",
+      });
+    }
+
+    if (booking.status !== "pending") {
+      return res.status(400).json({
+        success: false,
+        message: "Diese Buchung kann nicht mehr genehmigt werden",
+      });
+    }
+
+    booking.status = "confirmed";
+    await booking.save();
+
+    // Send confirmation notification to user (optional, don't fail if it errors)
+    try {
+      const io = req.app.get("io");
+      if (io && createNotification) {
+        await createNotification(
+          {
+            recipient: booking.user._id,
+            sender: req.user._id,
+            type: "booking_confirmed",
+            title: "Buchung bestätigt",
+            message: `Ihre Buchung #${booking.bookingNumber} wurde bestätigt!`,
+            relatedBooking: booking._id,
+            actionUrl: `/dashboard/bookings/${booking._id}`,
+            metadata: {
+              bookingNumber: booking.bookingNumber,
+              vehicleName: booking.vehicle.name,
+              confirmedBy: `${req.user.firstName} ${req.user.lastName}`,
+              notes: notes || "",
+            },
+          },
+          io
+        );
+      }
+    } catch (notificationError) {
+      console.error("Notification error (non-critical):", notificationError.message);
+      // Continue anyway - notification failure shouldn't block approval
+    }
+
+    res.json({
+      success: true,
+      message: "Buchung erfolgreich genehmigt",
+      data: booking,
+    });
+  } catch (error) {
+    console.error("Approve booking error:", error);
+    console.error("Error stack:", error.stack);
+    res.status(500).json({
+      success: false,
+      message: "Fehler bei der Buchungsgenehmigung",
+      error: error.message,
+    });
+  }
+};
+
+// Reject booking
+const rejectBooking = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const { reason } = req.body;
+
+    const booking = await Booking.findById(bookingId)
+      .populate("user", "firstName lastName email")
+      .populate("vehicle", "name");
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Buchung nicht gefunden",
+      });
+    }
+
+    if (booking.status !== "pending") {
+      return res.status(400).json({
+        success: false,
+        message: "Diese Buchung kann nicht mehr abgelehnt werden",
+      });
+    }
+
+    // Process Stripe refund if payment was made
+    let refundInfo = null;
+    if (
+      booking.payment?.method === "stripe" &&
+      booking.payment?.stripeDetails?.paymentIntentId &&
+      (booking.payment?.status === "completed" || booking.payment?.status === "partially_paid")
+    ) {
+      try {
+        const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+
+        // Create refund
+        const refund = await stripe.refunds.create({
+          payment_intent: booking.payment.stripeDetails.paymentIntentId,
+          reason: "requested_by_customer",
+          metadata: {
+            bookingId: booking._id.toString(),
+            bookingNumber: booking.bookingNumber,
+            rejectionReason: reason || "Von Administrator abgelehnt",
+          },
+        });
+
+        refundInfo = {
+          refundId: refund.id,
+          amount: refund.amount / 100, // Convert cents to euros
+          status: refund.status,
+          processedAt: new Date(),
+        };
+
+        // Update payment status
+        booking.payment.status = "refunded";
+        booking.payment.refund = refundInfo;
+
+        console.log(`Refund processed for booking ${booking.bookingNumber}: €${refundInfo.amount}`);
+      } catch (refundError) {
+        console.error("Stripe refund error:", refundError);
+        // Continue with rejection even if refund fails - admin can process manually
+      }
+    }
+
+    booking.status = "cancelled";
+    booking.cancellation = {
+      isCancelled: true,
+      cancelledAt: new Date(),
+      cancelledBy: req.user._id,
+      reason: reason || "Von Administrator abgelehnt",
+      refundProcessed: refundInfo ? true : false,
+      refundAmount: refundInfo?.amount || 0,
+    };
+    await booking.save();
+
+    // Send rejection notification to user (optional, don't fail if it errors)
+    try {
+      const io = req.app.get("io");
+      const notificationMessage = refundInfo
+        ? `Ihre Buchung #${booking.bookingNumber} wurde abgelehnt. Eine Rückerstattung von €${refundInfo.amount.toFixed(2)} wurde verarbeitet.`
+        : `Ihre Buchung #${booking.bookingNumber} wurde abgelehnt.`;
+
+      if (io && createNotification) {
+        await createNotification(
+          {
+            recipient: booking.user._id,
+            sender: req.user._id,
+            type: "booking_rejected",
+            title: "Buchung abgelehnt",
+            message: notificationMessage,
+            relatedBooking: booking._id,
+            actionUrl: `/dashboard/bookings/${booking._id}`,
+            metadata: {
+              bookingNumber: booking.bookingNumber,
+              vehicleName: booking.vehicle.name,
+              reason: reason || "Von Administrator abgelehnt",
+              refundProcessed: refundInfo ? true : false,
+              refundAmount: refundInfo?.amount || 0,
+            },
+          },
+          io
+        );
+      }
+
+      // Send email notification about rejection and refund
+      if (refundInfo) {
+        const sendEmail = require("../utils/sendEmail");
+        try {
+          await sendEmail({
+            to: booking.user.email,
+            subject: "Buchungsablehnung & Rückerstattung - WohnmobilTraum",
+            html: `
+              <h1>Buchung abgelehnt</h1>
+              <p>Sehr geehrte/r ${booking.user.firstName} ${booking.user.lastName},</p>
+              <p>Ihre Buchung <strong>#${booking.bookingNumber}</strong> wurde leider abgelehnt.</p>
+              <h3>Ablehnungsgrund:</h3>
+              <p>${reason || "Von Administrator abgelehnt"}</p>
+              <h3>Rückerstattung:</h3>
+              <p>Der Betrag von <strong>€${refundInfo.amount.toFixed(2)}</strong> wurde zurückerstattet.</p>
+              <p>Die Rückerstattung wird in 5-10 Werktagen auf Ihrem Konto erscheinen.</p>
+              <p>Bei Fragen stehen wir Ihnen gerne zur Verfügung.</p>
+              <p>Mit freundlichen Grüßen,<br>Ihr WohnmobilTraum Team</p>
+            `,
+          });
+        } catch (emailError) {
+          console.error("Email error (non-critical):", emailError.message);
+        }
+      }
+    } catch (notificationError) {
+      console.error("Notification error (non-critical):", notificationError.message);
+      // Continue anyway - notification failure shouldn't block rejection
+    }
+
+    res.json({
+      success: true,
+      message: refundInfo
+        ? `Buchung abgelehnt und Rückerstattung von €${refundInfo.amount.toFixed(2)} verarbeitet`
+        : "Buchung abgelehnt",
+      data: booking,
+      refund: refundInfo,
+    });
+  } catch (error) {
+    console.error("Reject booking error:", error);
+    console.error("Error stack:", error.stack);
+    res.status(500).json({
+      success: false,
+      message: "Fehler bei der Buchungsablehnung",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getDashboardStats,
   getUsers,
@@ -940,6 +1295,10 @@ module.exports = {
   deleteUser,
   createUser,
   getVehicles,
+  getPendingVehicles,
+  getPendingBookings,
+  approveBooking,
+  rejectBooking,
   uploadVehicleImage,
   createVehicle,
   updateVehicle,
