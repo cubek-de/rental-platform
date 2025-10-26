@@ -147,3 +147,24 @@ Thumbs.db
 # Temporary files
 tmp/
 temp/
+
+# Internal documentation and implementation notes (not for public)
+AGENT_IMPLEMENTATION_COMPLETE.md
+AGENT_MODE_IMPLEMENTATION_GUIDE.md
+BACKEND_FIX_500_ERROR.md
+BOOKING_COMPLETE_FIX.md
+BOOKING_FINAL_FIX.md
+BOOKING_FIXES.md
+CLAUDE.md
+FINAL_BOOKING_FIX.md
+FINAL_BOOKING_FIXES.md
+INTEGRATION_SNIPPETS.md
+PORT_CONFIG.md
+URGENT_FIXES_APPLIED.md
+
+# Internal scripts
+update_agent_form.py
+UPDATE_AGENT_FORM.sh
+
+# Internal assets
+wohnmobile.jpg
