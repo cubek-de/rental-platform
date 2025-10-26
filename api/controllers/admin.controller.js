@@ -1244,6 +1244,10 @@ const rejectBooking = async (req, res) => {
       if (refundInfo) {
         const sendEmail = require("../utils/sendEmail");
         try {
+          console.log(`📧 Sending rejection email with refund to: ${booking.user.email}`);
+          console.log(`   Booking: ${booking.bookingNumber}`);
+          console.log(`   Refund: €${refundInfo.amount.toFixed(2)}`);
+
           await sendEmail({
             to: booking.user.email,
             subject: "Buchungsablehnung & Rückerstattung - WohnmobilTraum",
@@ -1347,13 +1351,18 @@ const rejectBooking = async (req, res) => {
               </html>
             `,
           });
+          console.log(`✅ Rejection email with refund sent successfully to ${booking.user.email}`);
         } catch (emailError) {
-          console.error("Email error (non-critical):", emailError.message);
+          console.error("❌ Email error (non-critical):", emailError.message);
         }
       } else {
         // Send email for rejection without refund
         const sendEmail = require("../utils/sendEmail");
         try {
+          console.log(`📧 Sending rejection email (no refund) to: ${booking.user.email}`);
+          console.log(`   Booking: ${booking.bookingNumber}`);
+          console.log(`   Reason: ${reason || "Von Administrator abgelehnt"}`);
+
           await sendEmail({
             to: booking.user.email,
             subject: "Buchungsablehnung - WohnmobilTraum",
@@ -1448,8 +1457,9 @@ const rejectBooking = async (req, res) => {
               </html>
             `,
           });
+          console.log(`✅ Rejection email (no refund) sent successfully to ${booking.user.email}`);
         } catch (emailError) {
-          console.error("Email error (non-critical):", emailError.message);
+          console.error("❌ Email error (non-critical):", emailError.message);
         }
       }
     } catch (notificationError) {

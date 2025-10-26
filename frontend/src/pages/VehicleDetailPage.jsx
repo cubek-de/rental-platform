@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   Button,
@@ -55,6 +55,8 @@ const VehicleDetailPage = () => {
   const [isAvailable, setIsAvailable] = useState(false);
   const [totalPrice, setTotalPrice] = useState(0);
   const [rentalDays, setRentalDays] = useState(0);
+  const [availabilityError, setAvailabilityError] = useState("");
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
 
   useEffect(() => {
     const fetchVehicleDetails = async () => {
@@ -92,7 +94,7 @@ const VehicleDetailPage = () => {
     }
   }, [slug]);
 
-  const calculatePrice = () => {
+  const calculatePrice = useCallback(() => {
     if (!startDate || !endDate || !vehicle) return;
 
     const start = new Date(startDate);
@@ -104,24 +106,80 @@ const VehicleDetailPage = () => {
     const cleaningFee = vehicle?.pricing?.cleaningFee || 0;
     const total = basePrice + cleaningFee;
     setTotalPrice(total);
-  };
+  }, [startDate, endDate, vehicle]);
 
-  const checkAvailability = async () => {
+  const checkAvailability = useCallback(async () => {
     if (!startDate || !endDate) {
-      alert("Bitte wählen Sie Start- und Enddatum aus.");
+      setAvailabilityError("Bitte wählen Sie Start- und Enddatum aus.");
       return;
     }
 
-    calculatePrice();
-    setIsAvailable(true);
-    setAvailabilityChecked(true);
-  };
+    // Check if end date is after start date
+    if (new Date(endDate) <= new Date(startDate)) {
+      setAvailabilityError("Rückgabedatum muss nach dem Abholdatum liegen.");
+      return;
+    }
+
+    try {
+      setCheckingAvailability(true);
+      setAvailabilityError("");
+
+      const response = await vehicleService.checkAvailability(
+        vehicle._id,
+        startDate,
+        endDate
+      );
+
+      if (response?.data?.success) {
+        const available = response.data.data.available;
+        setIsAvailable(available);
+        setAvailabilityChecked(true);
+
+        if (available) {
+          calculatePrice();
+        } else {
+          setAvailabilityError(
+            "Das Fahrzeug ist für diese Daten bereits gebucht. Bitte wählen Sie andere Daten."
+          );
+        }
+      } else {
+        setAvailabilityError("Fehler beim Prüfen der Verfügbarkeit.");
+      }
+    } catch (err) {
+      console.error("Availability check error:", err);
+      setAvailabilityError(
+        "Fehler beim Prüfen der Verfügbarkeit. Bitte versuchen Sie es erneut."
+      );
+    } finally {
+      setCheckingAvailability(false);
+    }
+  }, [startDate, endDate, vehicle, calculatePrice]);
+
+  // Auto-check availability when both dates are selected
+  useEffect(() => {
+    if (startDate && endDate && vehicle) {
+      // Reset previous check
+      setAvailabilityChecked(false);
+      setIsAvailable(false);
+
+      // Auto-check availability
+      checkAvailability();
+    }
+  }, [startDate, endDate, vehicle, checkAvailability]);
 
   const handleBooking = () => {
     if (!startDate || !endDate) {
-      alert("Bitte wählen Sie Start- und Enddatum aus.");
+      setAvailabilityError("Bitte wählen Sie Start- und Enddatum aus.");
       return;
     }
+
+    if (!isAvailable || availabilityError) {
+      setAvailabilityError(
+        "Das Fahrzeug ist für diese Daten nicht verfügbar. Bitte wählen Sie andere Daten."
+      );
+      return;
+    }
+
     // Pass slug instead of _id so the API can find the vehicle
     navigate(
       `/booking/new?vehicleSlug=${vehicle.slug}&startDate=${startDate}&endDate=${endDate}`
@@ -1000,9 +1058,16 @@ const VehicleDetailPage = () => {
                     </label>
                     <input
                       type="date"
-                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-200 focus:outline-none"
+                      className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-4 focus:outline-none ${
+                        availabilityError
+                          ? "border-red-500 focus:border-red-600 focus:ring-red-200"
+                          : "border-gray-300 focus:border-primary-500 focus:ring-primary-200"
+                      }`}
                       value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
+                      onChange={(e) => {
+                        setStartDate(e.target.value);
+                        setAvailabilityError("");
+                      }}
                       min={new Date().toISOString().split("T")[0]}
                     />
                   </div>
@@ -1014,12 +1079,34 @@ const VehicleDetailPage = () => {
                     </label>
                     <input
                       type="date"
-                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-200 focus:outline-none"
+                      className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-4 focus:outline-none ${
+                        availabilityError
+                          ? "border-red-500 focus:border-red-600 focus:ring-red-200"
+                          : "border-gray-300 focus:border-primary-500 focus:ring-primary-200"
+                      }`}
                       value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
+                      onChange={(e) => {
+                        setEndDate(e.target.value);
+                        setAvailabilityError("");
+                      }}
                       min={startDate || new Date().toISOString().split("T")[0]}
                     />
                   </div>
+
+                  {/* Availability Check Status */}
+                  {checkingAvailability && (
+                    <div className="flex items-center justify-center py-3">
+                      <Spinner size="md" />
+                      <span className="ml-2 text-gray-600">Verfügbarkeit wird geprüft...</span>
+                    </div>
+                  )}
+
+                  {/* Error Message - Red Alert */}
+                  {availabilityError && (
+                    <Alert color="failure" icon={HiBan}>
+                      <span className="font-semibold">{availabilityError}</span>
+                    </Alert>
+                  )}
 
                   {/* Price Summary */}
                   {availabilityChecked && rentalDays > 0 && (
@@ -1055,27 +1142,17 @@ const VehicleDetailPage = () => {
                     </div>
                   )}
 
-                  {/* Check Availability Button */}
-                  {!availabilityChecked && (
-                    <Button
-                      onClick={checkAvailability}
-                      className="w-full bg-primary-500 hover:bg-primary-600"
-                      size="lg"
-                    >
-                      Verfügbarkeit prüfen
-                    </Button>
-                  )}
-
-                  {/* Booking Button */}
-                  {availabilityChecked && isAvailable && (
+                  {/* Booking Button - Only show if available */}
+                  {availabilityChecked && isAvailable && !availabilityError && (
                     <>
                       <Alert color="success" icon={HiCheckCircle}>
-                        Fahrzeug ist verfügbar!
+                        <span className="font-semibold">Fahrzeug ist verfügbar!</span>
                       </Alert>
                       <Button
                         onClick={handleBooking}
                         className="w-full bg-green-500 hover:bg-green-600"
                         size="lg"
+                        disabled={checkingAvailability}
                       >
                         <HiCheckCircle className="mr-2 h-5 w-5" />
                         Jetzt buchen
