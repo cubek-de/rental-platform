@@ -1,5 +1,5 @@
 import React from "react";
-import { Card, Badge, Button } from "flowbite-react";
+import { Card, Badge } from "flowbite-react";
 import { FiMapPin, FiUsers, FiCalendar } from "react-icons/fi";
 import { Link } from "react-router-dom";
 
@@ -79,14 +79,12 @@ const VehicleCard = ({ vehicle }) => {
               <span className="text-sm font-normal text-gray-600"> / Tag</span>
             </div>
 
-            <Button
-              as={Link}
+            <Link
               to={`/vehicles/${vehicleSlug || vehicleId || "details"}`}
-              size="xs"
-              gradientDuoTone="cyanToBlue"
+              className="bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white hover:text-white px-4 py-2 rounded-lg text-xs font-medium transition-all duration-300 shadow-md hover:shadow-lg"
             >
               Details
-            </Button>
+            </Link>
           </div>
         </div>
       </div>

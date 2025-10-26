@@ -948,7 +948,7 @@ const VehicleDetailPage = () => {
                     disabled={
                       !startDate || !endDate || availabilityStatus.loading
                     }
-                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 rounded-lg transition-all duration-300"
+                    className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-semibold py-3 rounded-lg transition-all duration-300"
                     isProcessing={availabilityStatus.loading}
                   >
                     {availabilityStatus.loading

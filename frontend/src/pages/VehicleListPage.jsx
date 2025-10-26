@@ -591,9 +591,12 @@ const VehicleListPage = () => {
             ) : error ? (
               <div className="text-center py-12 bg-white rounded-2xl">
                 <p className="text-red-600 mb-4">{error}</p>
-                <Button onClick={fetchVehicles} className="bg-primary-500 hover:bg-primary-600">
+                <button
+                  onClick={fetchVehicles}
+                  className="bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white hover:text-white px-5 py-2.5 rounded-lg font-medium transition-all duration-300 shadow-md hover:shadow-lg"
+                >
                   Erneut versuchen
-                </Button>
+                </button>
               </div>
             ) : vehicles.length === 0 ? (
               <div className="text-center py-16 bg-white rounded-2xl border-2 border-gray-100">
@@ -604,9 +607,12 @@ const VehicleListPage = () => {
                 <p className="text-gray-600 mb-6">
                   Versuchen Sie, Ihre Filterkriterien anzupassen
                 </p>
-                <Button onClick={clearFilters} className="bg-primary-500 hover:bg-primary-600 text-white">
+                <button
+                  onClick={clearFilters}
+                  className="bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white hover:text-white px-5 py-2.5 rounded-lg font-medium transition-all duration-300 shadow-md hover:shadow-lg"
+                >
                   Filter zurücksetzen
-                </Button>
+                </button>
               </div>
             ) : (
               <>
@@ -708,15 +714,13 @@ const VehicleListPage = () => {
                                 </span>
                               </p>
                             </div>
-                            <Button
-                              size="sm"
-                              as={Link}
+                            <Link
                               to={`/vehicles/${vehicle.slug || vehicle._id}`}
-                              className="bg-primary-500 hover:bg-primary-600 text-white"
+                              className="inline-flex items-center bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg"
                             >
                               Details
                               <HiArrowCircleRight className="ml-2 h-4 w-4" />
-                            </Button>
+                            </Link>
                           </div>
                         </div>
                       </div>
@@ -785,14 +789,13 @@ const VehicleListPage = () => {
                                 </span>
                                 <span className="text-gray-500">pro Tag</span>
                               </div>
-                              <Button
-                                as={Link}
+                              <Link
                                 to={`/vehicles/${vehicle.slug || vehicle._id}`}
-                                className="bg-primary-500 hover:bg-primary-600 text-white"
+                                className="inline-flex items-center bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white hover:text-white px-5 py-2.5 rounded-lg font-medium transition-all duration-300 shadow-md hover:shadow-lg"
                               >
                                 Details ansehen
                                 <HiArrowCircleRight className="ml-2 h-5 w-5" />
-                              </Button>
+                              </Link>
                             </div>
                           </div>
                         </div>

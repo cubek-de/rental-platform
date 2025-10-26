@@ -891,7 +891,7 @@ const AgentDashboardPage = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div className="flex justify-center items-center h-screen bg-gradient-to-br from-blue-50 via-white to-emerald-50">
         <div className="text-center">
           <div className="relative">
             <div className="w-20 h-20 border-4 border-blue-200 rounded-full animate-spin"></div>
@@ -1222,8 +1222,8 @@ const AgentDashboardPage = () => {
           icon={FiTrendingUp}
           title="Gesamt Buchungen"
           value={stats.totalBookings}
-          gradient="bg-gradient-to-br from-purple-500 to-purple-600"
-          iconBg="bg-purple-600"
+          gradient="bg-gradient-to-br from-emerald-500 to-emerald-600"
+          iconBg="bg-emerald-600"
         />
       </div>
 
@@ -1243,14 +1243,14 @@ const AgentDashboardPage = () => {
             </Button>
             <Button
               onClick={() => setActiveSection("bookings")}
-              className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 border-0"
+              className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 border-0"
             >
               <FiCalendar className="mr-2" />
               Buchungen verwalten
             </Button>
             <Button
               onClick={() => setActiveSection("vehicles")}
-              className="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 border-0"
+              className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 border-0"
             >
               <FiEye className="mr-2" />
               Meine Fahrzeuge anzeigen
@@ -1547,7 +1547,7 @@ const AgentDashboardPage = () => {
               {/* Contact & Support */}
               <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-200">
                 <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <FiPhone className="w-5 h-5 text-purple-600" />
+                  <FiPhone className="w-5 h-5 text-emerald-600" />
                   Kontakt & Support
                 </h3>
                 <div className="space-y-4">
@@ -1571,7 +1571,7 @@ const AgentDashboardPage = () => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                     />
                   </div>
-                  <button className="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg transition-colors">
+                  <button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 rounded-lg transition-colors">
                     Support kontaktieren
                   </button>
                 </div>
@@ -1885,9 +1885,9 @@ const AgentDashboardPage = () => {
             </div>
 
             {/* Description */}
-            <div className="bg-purple-50 rounded-xl p-6">
+            <div className="bg-orange-50 rounded-xl p-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-                <FiEdit className="w-5 h-5 mr-2 text-purple-600" />
+                <FiEdit className="w-5 h-5 mr-2 text-orange-600" />
                 Beschreibung & Details
               </h3>
               <div className="space-y-2">
@@ -1908,7 +1908,7 @@ const AgentDashboardPage = () => {
                       description: e.target.value,
                     })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                 />
               </div>
             </div>

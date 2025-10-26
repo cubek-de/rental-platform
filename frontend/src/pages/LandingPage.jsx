@@ -1074,7 +1074,7 @@ const LandingPage = () => {
                                 </div>
 
                                 {/* Modern CTA Button */}
-                                <div className="bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white px-6 py-4 rounded-2xl font-black transition-all duration-300 flex items-center gap-2.5 shadow-xl group-hover:shadow-2xl transform hover:scale-105">
+                                <div className="bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white hover:text-white px-6 py-4 rounded-2xl font-black transition-all duration-300 flex items-center gap-2.5 shadow-xl group-hover:shadow-2xl transform hover:scale-105">
                                   <span className="text-sm">Details</span>
                                   <HiArrowRight className="h-5 w-5 group-hover:translate-x-2 transition-transform duration-300" />
                                 </div>

@@ -1500,7 +1500,7 @@ const AdminDashboardPage = () => {
         {/* Center Section - Premium Search Bar */}
         <div className="flex-1 max-w-2xl">
           <div className="relative group">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-3xl blur-2xl opacity-0 group-hover:opacity-100 transition-all duration-500"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-emerald-500/10 rounded-3xl blur-2xl opacity-0 group-hover:opacity-100 transition-all duration-500"></div>
             <div className="relative bg-gray-50/90 hover:bg-white/95 rounded-3xl border border-gray-200/60 hover:border-blue-200/80 transition-all duration-500 shadow-sm hover:shadow-md">
               <FiSearch className="absolute left-5 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 group-hover:text-blue-500 transition-colors duration-300" />
               <input
@@ -1541,7 +1541,7 @@ const AdminDashboardPage = () => {
             arrowIcon={false}
             inline
             label={
-              <div className="flex items-center space-x-3 bg-gradient-to-r from-gray-50/90 to-white/90 hover:from-blue-50/90 hover:to-purple-50/90 rounded-3xl p-3 border border-gray-200/60 hover:border-blue-200/80 transition-all duration-500 cursor-pointer group shadow-sm hover:shadow-md">
+              <div className="flex items-center space-x-3 bg-gradient-to-r from-gray-50/90 to-white/90 hover:from-blue-50/90 hover:to-emerald-50/90 rounded-3xl p-3 border border-gray-200/60 hover:border-blue-200/80 transition-all duration-500 cursor-pointer group shadow-sm hover:shadow-md">
                 <div className="relative">
                   <Avatar
                     img={
@@ -1733,7 +1733,7 @@ const AdminDashboardPage = () => {
             <div className="space-y-3">
               <Button
                 onClick={() => setShowCreateUserModal(true)}
-                className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 border-0"
+                className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 border-0"
               >
                 <FiPlus className="mr-2" />
                 Neuer Benutzer

@@ -923,7 +923,7 @@ const UserDashboard = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div className="bg-white rounded-2xl p-6 shadow-xl border border-gray-100 hover:shadow-2xl transition-all duration-300 group">
                 <div className="flex items-center mb-4">
-                  <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-3 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                  <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 p-3 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
                     <HiSearch className="h-6 w-6 text-white" />
                   </div>
                   <div className="ml-4">
@@ -937,7 +937,7 @@ const UserDashboard = () => {
                 </div>
                 <button
                   onClick={() => (window.location.href = "/vehicles")}
-                  className="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 hover:scale-105"
+                  className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 hover:scale-105"
                 >
                   Durchsuchen →
                 </button>
@@ -945,7 +945,7 @@ const UserDashboard = () => {
 
               <div className="bg-white rounded-2xl p-6 shadow-xl border border-gray-100 hover:shadow-2xl transition-all duration-300 group">
                 <div className="flex items-center mb-4">
-                  <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 p-3 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                  <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-3 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
                     <HiCalendar className="h-6 w-6 text-white" />
                   </div>
                   <div className="ml-4">
@@ -959,7 +959,7 @@ const UserDashboard = () => {
                 </div>
                 <button
                   onClick={() => setActiveSection("bookings")}
-                  className="w-full bg-gradient-to-r from-indigo-500 to-indigo-600 text-white py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 hover:scale-105"
+                  className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 hover:scale-105"
                 >
                   Verwalten →
                 </button>
