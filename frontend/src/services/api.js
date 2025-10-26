@@ -105,4 +105,12 @@ export const paymentService = {
     api.post("/api/payments/refund", { bookingId, amount, reason }),
 };
 
+// Favorites services
+export const favoritesService = {
+  addFavorite: (vehicleId) => api.post("/api/favorites/add", { vehicleId }),
+  removeFavorite: (vehicleId) => api.delete(`/api/favorites/remove/${vehicleId}`),
+  getFavorites: () => api.get("/api/favorites"),
+  checkFavorite: (vehicleId) => api.get(`/api/favorites/check/${vehicleId}`),
+};
+
 export default api;

@@ -132,6 +132,12 @@ const userSchema = new mongoose.Schema(
       smsNotifications: { type: Boolean, default: false },
       emailNotifications: { type: Boolean, default: true },
     },
+    favorites: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Vehicle",
+      },
+    ],
     status: {
       type: String,
       enum: ["active", "inactive", "suspended", "deleted"],

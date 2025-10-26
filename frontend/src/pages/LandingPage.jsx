@@ -40,7 +40,7 @@ import {
   HiOutlineFire,
   HiEye,
 } from "react-icons/hi";
-import { vehicleService } from "../services/api";
+import { vehicleService, favoritesService } from "../services/api";
 import {
   getVehicleImage,
   formatCurrency,
@@ -64,6 +64,7 @@ const LandingPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const vehiclesPerPage = 6;
+  const [favorites, setFavorites] = useState(new Set());
 
   const loadFeaturedVehicles = useCallback(async (page = 1) => {
     setFeaturedLoading(true);
@@ -152,9 +153,68 @@ const LandingPage = () => {
     loadFeaturedVehicles(1);
   }, [loadFeaturedVehicles]);
 
+  // Load user's favorites when logged in
+  useEffect(() => {
+    const loadFavorites = async () => {
+      if (user) {
+        try {
+          const response = await favoritesService.getFavorites();
+          const favoriteVehicles = response.data.data.favorites || [];
+          const favoriteIds = new Set(favoriteVehicles.map((v) => v._id));
+          setFavorites(favoriteIds);
+        } catch (error) {
+          console.error("Error loading favorites:", error);
+        }
+      } else {
+        // Clear favorites if user logs out
+        setFavorites(new Set());
+      }
+    };
+
+    loadFavorites();
+  }, [user]);
+
   const handleSearch = (e) => {
     e.preventDefault();
     navigate("/vehicles");
+  };
+
+  const toggleFavorite = async (e, vehicleId) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!user) {
+      // Redirect to login if not authenticated
+      navigate("/login", {
+        state: { message: "Bitte melden Sie sich an, um Fahrzeuge zu favorisieren" },
+      });
+      return;
+    }
+
+    try {
+      const isFavorite = favorites.has(vehicleId);
+
+      if (isFavorite) {
+        // Remove from favorites
+        await favoritesService.removeFavorite(vehicleId);
+        setFavorites((prev) => {
+          const newFavorites = new Set(prev);
+          newFavorites.delete(vehicleId);
+          return newFavorites;
+        });
+      } else {
+        // Add to favorites
+        await favoritesService.addFavorite(vehicleId);
+        setFavorites((prev) => {
+          const newFavorites = new Set(prev);
+          newFavorites.add(vehicleId);
+          return newFavorites;
+        });
+      }
+    } catch (error) {
+      console.error("Error toggling favorite:", error);
+      // Optionally show an error message to the user
+    }
   };
 
   return (
@@ -870,133 +930,164 @@ const LandingPage = () => {
                   const basePrice = vehicle?.pricing?.basePrice?.perDay;
                   const rating = vehicle?.statistics?.rating?.average || 0;
                   const reviewCount = vehicle?.statistics?.rating?.count || 0;
+                  const isFavorite = favorites.has(vehicle._id);
 
                   return (
-                    <Link
+                    <div
                       key={vehicle._id}
-                      to={`/vehicles/${vehicle.slug || vehicle._id}`}
-                      className="block group"
+                      className="group relative"
                     >
-                      <div className="relative bg-white rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden transform hover:-translate-y-3 hover:scale-[1.02] border border-gray-100 hover:border-primary-200">
-                        {/* Premium Badge with Brand Colors */}
+                      {/* Modern Card with Enhanced Shadow and Border */}
+                      <div className="relative bg-white rounded-3xl shadow-2xl hover:shadow-3xl transition-all duration-500 overflow-hidden transform hover:-translate-y-4 hover:scale-[1.03] border-2 border-gray-100 hover:border-primary-300">
+                        {/* Premium Badge */}
                         {vehicle.featured && (
-                          <div className="absolute top-6 left-6 z-10">
-                            <div className="bg-gradient-to-r from-primary-500 to-primary-600 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg flex items-center gap-2">
-                              <HiOutlineFire className="h-4 w-4" />
+                          <div className="absolute top-4 left-4 z-20">
+                            <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white px-4 py-2.5 rounded-2xl text-sm font-black shadow-2xl flex items-center gap-2 backdrop-blur-sm">
+                              <HiOutlineFire className="h-5 w-5 animate-pulse" />
                               Premium
                             </div>
                           </div>
                         )}
 
+                        {/* Favorite Heart Button - Top Right */}
+                        <button
+                          onClick={(e) => toggleFavorite(e, vehicle._id)}
+                          className="absolute top-4 right-4 z-20 group/fav"
+                        >
+                          <div className={`p-3 rounded-full shadow-2xl backdrop-blur-md transition-all duration-300 transform hover:scale-110 ${
+                            isFavorite
+                              ? 'bg-red-500 hover:bg-red-600'
+                              : 'bg-white/90 hover:bg-white'
+                          }`}>
+                            <HiHeart className={`h-6 w-6 transition-all duration-300 ${
+                              isFavorite
+                                ? 'text-white fill-current'
+                                : 'text-gray-400 group-hover/fav:text-red-500'
+                            }`} />
+                          </div>
+                        </button>
+
                         {/* Available Badge */}
-                        <div className="absolute top-6 right-6 z-10">
-                          <div className="bg-green-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg flex items-center gap-1">
-                            <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                            Verfügbar
+                        <div className="absolute top-20 right-4 z-20">
+                          <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-2 rounded-2xl text-xs font-bold shadow-xl flex items-center gap-2 backdrop-blur-sm">
+                            <div className="w-2.5 h-2.5 bg-white rounded-full animate-ping"></div>
+                            <span>Verfügbar</span>
                           </div>
                         </div>
 
-                        {/* Enhanced Image Container */}
-                        <div className="relative h-72 overflow-hidden">
-                          <img
-                            src={imageUrl}
-                            alt={vehicle.name}
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                            onError={(e) => {
-                              e.target.onerror = null;
-                              e.target.src = FALLBACK_IMAGES[0];
-                            }}
-                          />
-                          {/* Elegant Overlay */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                        {/* Enhanced Image Container with Gradient Overlay */}
+                        <Link
+                          to={`/vehicles/${vehicle.slug || vehicle._id}`}
+                          className="block"
+                        >
+                          <div className="relative h-80 overflow-hidden">
+                            <img
+                              src={imageUrl}
+                              alt={vehicle.name}
+                              className="w-full h-full object-cover group-hover:scale-115 transition-transform duration-700 ease-out"
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = FALLBACK_IMAGES[0];
+                              }}
+                            />
+                            {/* Multi-layer Gradient Overlay */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-500"></div>
 
-                          {/* Floating Action Button */}
-                          <div className="absolute bottom-6 right-6 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-4 group-hover:translate-y-0">
-                            <div className="bg-primary-500 hover:bg-primary-600 text-white p-3 rounded-full shadow-xl hover:shadow-2xl transition-all duration-300">
-                              <HiArrowRight className="h-5 w-5" />
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Enhanced Content Section */}
-                        <div className="p-8">
-                          {/* Title and Location with Better Spacing */}
-                          <div className="mb-6">
-                            <h3 className="text-2xl font-bold text-gray-900 mb-3 line-clamp-2 group-hover:text-primary-600 transition-colors duration-300">
-                              {vehicle.name}
-                            </h3>
-                            <div className="flex items-center text-gray-500 text-sm font-medium">
-                              <HiLocationMarker className="h-5 w-5 mr-2 text-primary-500" />
-                              <span>{locationLabel}</span>
+                            {/* Floating View Button */}
+                            <div className="absolute bottom-6 right-6 opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-8 group-hover:translate-y-0">
+                              <div className="bg-white text-primary-600 hover:bg-primary-600 hover:text-white px-6 py-3 rounded-2xl font-bold shadow-2xl hover:shadow-3xl transition-all duration-300 flex items-center gap-2">
+                                <HiEye className="h-5 w-5" />
+                                <span>Ansehen</span>
+                              </div>
                             </div>
                           </div>
 
-                          {/* Rating with Enhanced Design */}
-                          {rating > 0 && (
-                            <div className="flex items-center gap-3 mb-6">
-                              <div className="flex items-center bg-yellow-50 px-3 py-1 rounded-full">
-                                {[...Array(5)].map((_, i) => (
-                                  <HiStar
-                                    key={i}
-                                    className={`h-4 w-4 ${
-                                      i < Math.floor(rating)
-                                        ? "text-yellow-400"
-                                        : "text-gray-300"
-                                    }`}
-                                  />
-                                ))}
+                          {/* Enhanced Content Section with Better Padding */}
+                          <div className="p-7">
+                            {/* Title and Location */}
+                            <div className="mb-5">
+                              <h3 className="text-2xl font-black text-gray-900 mb-3 line-clamp-2 group-hover:text-primary-600 transition-colors duration-300 leading-tight">
+                                {vehicle.name}
+                              </h3>
+                              <div className="flex items-center text-gray-600 text-sm font-semibold">
+                                <HiLocationMarker className="h-5 w-5 mr-2 text-primary-600" />
+                                <span>{locationLabel}</span>
                               </div>
-                              <span className="text-sm text-gray-600 font-medium">
-                                {rating.toFixed(1)} • {reviewCount} Bewertungen
-                              </span>
                             </div>
-                          )}
 
-                          {/* Enhanced Highlights with Brand Colors */}
-                          <div className="flex flex-wrap gap-2 mb-8">
-                            {highlights.slice(0, 3).map((highlight, index) => (
-                              <div
-                                key={index}
-                                className="bg-primary-50 text-primary-700 px-3 py-1 rounded-full text-sm font-medium border border-primary-100"
-                              >
-                                {highlight}
-                              </div>
-                            ))}
-                            {highlights.length > 3 && (
-                              <div className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm font-medium">
-                                +{highlights.length - 3} mehr
+                            {/* Enhanced Rating */}
+                            {rating > 0 && (
+                              <div className="flex items-center gap-3 mb-6">
+                                <div className="flex items-center bg-gradient-to-r from-yellow-50 to-orange-50 px-4 py-2 rounded-2xl border border-yellow-200">
+                                  {[...Array(5)].map((_, i) => (
+                                    <HiStar
+                                      key={i}
+                                      className={`h-4 w-4 ${
+                                        i < Math.floor(rating)
+                                          ? "text-yellow-500 fill-current"
+                                          : "text-gray-300"
+                                      }`}
+                                    />
+                                  ))}
+                                </div>
+                                <span className="text-sm text-gray-700 font-bold">
+                                  {rating.toFixed(1)}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  ({reviewCount})
+                                </span>
                               </div>
                             )}
-                          </div>
 
-                          {/* Enhanced Price Section */}
-                          <div className="flex items-center justify-between pt-6 border-t border-gray-100">
-                            <div className="flex flex-col">
-                              <span className="text-sm text-gray-500 font-medium mb-1">
-                                Preis ab
-                              </span>
-                              <div className="flex items-baseline gap-1">
-                                <span className="text-3xl font-black text-primary-600">
-                                  {formatCurrency(basePrice)}
-                                </span>
-                                <span className="text-sm text-gray-500 font-medium">
-                                  /Tag
-                                </span>
+                            {/* Modern Highlights Tags */}
+                            <div className="flex flex-wrap gap-2.5 mb-7">
+                              {highlights.slice(0, 3).map((highlight, index) => (
+                                <div
+                                  key={index}
+                                  className="bg-gradient-to-r from-primary-50 to-blue-50 text-primary-700 px-4 py-2 rounded-xl text-sm font-bold border-2 border-primary-200 hover:border-primary-400 transition-colors duration-200"
+                                >
+                                  {highlight}
+                                </div>
+                              ))}
+                              {highlights.length > 3 && (
+                                <div className="bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-bold border-2 border-gray-300">
+                                  +{highlights.length - 3}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Premium Price Section with Gradient Background */}
+                            <div className="bg-gradient-to-br from-gray-50 to-primary-50 rounded-2xl p-5 border-2 border-gray-200">
+                              <div className="flex items-center justify-between">
+                                <div className="flex flex-col">
+                                  <span className="text-xs text-gray-600 font-bold uppercase tracking-wider mb-1">
+                                    Preis ab
+                                  </span>
+                                  <div className="flex items-baseline gap-1.5">
+                                    <span className="text-4xl font-black bg-gradient-to-r from-primary-600 to-primary-700 bg-clip-text text-transparent">
+                                      {formatCurrency(basePrice)}
+                                    </span>
+                                    <span className="text-sm text-gray-600 font-bold">
+                                      /Tag
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Modern CTA Button */}
+                                <div className="bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white px-6 py-4 rounded-2xl font-black transition-all duration-300 flex items-center gap-2.5 shadow-xl group-hover:shadow-2xl transform hover:scale-105">
+                                  <span className="text-sm">Details</span>
+                                  <HiArrowRight className="h-5 w-5 group-hover:translate-x-2 transition-transform duration-300" />
+                                </div>
                               </div>
                             </div>
-
-                            {/* Call-to-Action */}
-                            <div className="bg-primary-500 group-hover:bg-primary-600 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 flex items-center gap-2 shadow-lg group-hover:shadow-xl">
-                              <span>Details ansehen</span>
-                              <HiArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                            </div>
                           </div>
-                        </div>
+                        </Link>
 
-                        {/* Subtle Hover Effect Indicator */}
-                        <div className="absolute inset-0 border-2 border-transparent group-hover:border-primary-300 rounded-3xl transition-all duration-300 pointer-events-none"></div>
+                        {/* Premium Glow Effect on Hover */}
+                        <div className="absolute inset-0 border-4 border-transparent group-hover:border-primary-400/50 rounded-3xl transition-all duration-500 pointer-events-none"></div>
+                        <div className="absolute -inset-1 bg-gradient-to-r from-primary-600 to-blue-600 rounded-3xl opacity-0 group-hover:opacity-20 blur-2xl transition-all duration-500 pointer-events-none"></div>
                       </div>
-                    </Link>
+                    </div>
                   );
                 })}
               </div>
